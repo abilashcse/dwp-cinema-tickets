@@ -72,8 +72,7 @@ class TicketServiceImplTest {
         var seats = mock(SeatReservationService.class);
         var service = serviceWithMocks(payment, seats);
 
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest(null, 1)));
+        assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(null, 1));
 
         verifyNoInteractions(payment, seats);
     }
@@ -84,10 +83,8 @@ class TicketServiceImplTest {
         var seats = mock(SeatReservationService.class);
         var service = serviceWithMocks(payment, seats);
 
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 0)));
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, -1)));
+        assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 0));
+        assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(TicketTypeRequest.Type.ADULT, -1));
 
         verifyNoInteractions(payment, seats);
     }
