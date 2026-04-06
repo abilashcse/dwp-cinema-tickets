@@ -6,7 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import uk.gov.dwp.uc.pairtest.TicketService;
+import uk.gov.dwp.uc.pairtest.CinemaTicketService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
@@ -36,7 +36,7 @@ class PurchaseControllerTest {
     private MockMvc mvc;
 
     @MockitoBean
-    private TicketService ticketService;
+    private CinemaTicketService ticketService;
 
     @MockitoBean
     private PurchaseRepository purchaseRepository;
@@ -55,7 +55,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("accountId")))
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -70,7 +70,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -78,7 +78,7 @@ class PurchaseControllerTest {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new InvalidPurchaseException())
                 .when(ticketService)
-                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+                .purchaseTicketsWithReceipt(eq(123L), any(TicketTypeRequest[].class));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -92,7 +92,7 @@ class PurchaseControllerTest {
     @Test
     void returns201AndCallsTicketService() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
-        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+        when(ticketService.purchaseTicketsWithReceipt(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
                         "T-100",
                         new PurchaseSummary(2, 1, 1, 4, 65, 3)
@@ -111,7 +111,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.totalTickets").value(4))
                 .andExpect(jsonPath("$.message").value("Purchase confirmed"));
 
-        verify(ticketService).purchaseTickets(anyLong(), any(TicketTypeRequest[].class));
+        verify(ticketService).purchaseTicketsWithReceipt(anyLong(), any(TicketTypeRequest[].class));
     }
 
     @Test
@@ -122,7 +122,7 @@ class PurchaseControllerTest {
                         .content(""))
                 .andExpect(status().isBadRequest());
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -148,7 +148,7 @@ class PurchaseControllerTest {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new RuntimeException("boom"))
                 .when(ticketService)
-                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+                .purchaseTicketsWithReceipt(eq(123L), any(TicketTypeRequest[].class));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -164,7 +164,7 @@ class PurchaseControllerTest {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new PaymentFailedException("Payment failed", new RuntimeException("boom")))
                 .when(ticketService)
-                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+                .purchaseTicketsWithReceipt(eq(123L), any(TicketTypeRequest[].class));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -180,7 +180,7 @@ class PurchaseControllerTest {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new SeatReservationFailedException("Seat reservation failed", new RuntimeException("boom")))
                 .when(ticketService)
-                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+                .purchaseTicketsWithReceipt(eq(123L), any(TicketTypeRequest[].class));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -202,7 +202,7 @@ class PurchaseControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors").isNotEmpty());
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -216,7 +216,7 @@ class PurchaseControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -231,7 +231,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -246,7 +246,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -260,7 +260,7 @@ class PurchaseControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.ruleViolations[0]").value("Total tickets must be <= 25"));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -275,7 +275,7 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test
@@ -295,7 +295,7 @@ class PurchaseControllerTest {
     @Test
     void returns201ForAdultsOnly() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
-        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+        when(ticketService.purchaseTicketsWithReceipt(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
                         "b-2",
                         new PurchaseSummary(3, 0, 0, 3, 75, 3)
@@ -318,7 +318,7 @@ class PurchaseControllerTest {
     @Test
     void infantsDoNotContributeToPaymentOrSeats() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
-        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+        when(ticketService.purchaseTicketsWithReceipt(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
                         "b-3",
                         new PurchaseSummary(2, 0, 2, 4, 50, 2)
@@ -340,7 +340,7 @@ class PurchaseControllerTest {
     @Test
     void oneAdultOneInfantOnLap() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
-        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+        when(ticketService.purchaseTicketsWithReceipt(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
                         "b-4",
                         new PurchaseSummary(1, 0, 1, 2, 25, 1)
@@ -371,7 +371,7 @@ class PurchaseControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.ruleViolations", hasItem("Number of infants cannot exceed number of adults")));
 
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+        verify(ticketService, never()).purchaseTicketsWithReceipt(anyLong(), any());
     }
 
     @Test

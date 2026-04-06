@@ -12,12 +12,11 @@ import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 import uk.gov.dwp.uc.pairtest.validation.AccountIdValidator;
 import uk.gov.dwp.uc.pairtest.validation.BusinessRulesValidator;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseRequest;
-import uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 import uk.gov.dwp.uc.pairtest.validation.TicketTypeRequestsValidator;
 
 @Service
-public class TicketServiceImpl implements TicketService {
+public class TicketServiceImpl implements CinemaTicketService {
 
     private final TicketPaymentService ticketPaymentService;
     private final SeatReservationService seatReservationService;
@@ -47,7 +46,12 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public PurchaseReceipt purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
+    public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
+        purchaseTicketsWithReceipt(accountId, ticketTypeRequests);
+    }
+
+    @Override
+    public uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt purchaseTicketsWithReceipt(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
         PurchaseRequest request = new PurchaseRequest(accountId, ticketTypeRequests);
         accountIdValidator.validate(request);
         ticketTypeRequestsValidator.validate(request);
@@ -70,7 +74,7 @@ public class TicketServiceImpl implements TicketService {
                 summary.totalSeatsToAllocate()
         ));
 
-        return new PurchaseReceipt(bookingId, summary);
+        return new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(bookingId, summary);
     }
 
     private static PurchaseSummary summarize(TicketTypeRequest[] ticketTypeRequests, TicketPricingProperties ticketPricing) {

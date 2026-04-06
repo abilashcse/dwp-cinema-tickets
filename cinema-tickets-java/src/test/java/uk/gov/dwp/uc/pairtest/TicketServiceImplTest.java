@@ -138,7 +138,7 @@ class TicketServiceImplTest {
     void returnedSummaryContainsCorrectValues() {
         var service = serviceWithMocks(mock(TicketPaymentService.class), mock(SeatReservationService.class));
 
-        var receipt = service.purchaseTickets(
+        var receipt = service.purchaseTicketsWithReceipt(
                 VALID_ACCOUNT_ID,
                 new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2),
                 new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1),

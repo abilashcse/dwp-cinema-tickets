@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import uk.gov.dwp.uc.pairtest.TicketService;
+import uk.gov.dwp.uc.pairtest.CinemaTicketService;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
@@ -23,11 +23,11 @@ import java.util.List;
 @RequestMapping("/api/purchases")
 public class PurchaseController {
 
-    private final TicketService ticketService;
+    private final CinemaTicketService ticketService;
     private final PurchaseRepository purchaseRepository;
     private final int maxTicketsPerPurchase;
 
-    public PurchaseController(TicketService ticketService,
+    public PurchaseController(CinemaTicketService ticketService,
                               PurchaseRepository purchaseRepository,
                               @Value("${purchase.max-tickets:25}") int maxTicketsPerPurchase) {
         this.ticketService = ticketService;
@@ -45,7 +45,7 @@ public class PurchaseController {
         validateBusinessRules(body);
 
         var requests = toTicketTypeRequests(body);
-        PurchaseReceipt receipt = ticketService.purchaseTickets(body.accountId(), requests);
+        PurchaseReceipt receipt = ticketService.purchaseTicketsWithReceipt(body.accountId(), requests);
         PurchaseSummary summary = receipt.summary();
 
         var response = new PurchaseResponseDto(
