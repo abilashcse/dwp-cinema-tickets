@@ -13,6 +13,7 @@ import uk.gov.dwp.uc.pairtest.TicketService;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
+import uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 
 import java.util.ArrayList;
@@ -43,28 +44,12 @@ public class PurchaseController {
     public ResponseEntity<PurchaseResponseDto> purchase(@Valid @RequestBody PurchaseRequestDto body) {
         validateBusinessRules(body);
 
-        Purchase existing = purchaseRepository.findAll().stream()
-                .filter(p -> p.accountId() == body.accountId())
-                .findFirst()
-                .orElse(null);
-
-        if (existing != null) {
-            return ResponseEntity.ok(new PurchaseResponseDto(
-                    existing.accountId(),
-                    existing.adults(),
-                    existing.children(),
-                    existing.infants(),
-                    existing.totalTickets(),
-                    existing.totalAmountToPay(),
-                    existing.totalSeatsToAllocate(),
-                    "Ticket already purchased"
-            ));
-        }
-
         var requests = toTicketTypeRequests(body);
-        PurchaseSummary summary = ticketService.purchaseTickets(body.accountId(), requests);
+        PurchaseReceipt receipt = ticketService.purchaseTickets(body.accountId(), requests);
+        PurchaseSummary summary = receipt.summary();
 
         var response = new PurchaseResponseDto(
+                receipt.bookingId(),
                 body.accountId(),
                 summary.adults(),
                 summary.children(),

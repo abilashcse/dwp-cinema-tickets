@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
+import uk.gov.dwp.uc.pairtest.booking.BookingIdGenerator;
 import uk.gov.dwp.uc.pairtest.config.TicketPricingProperties;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
@@ -137,12 +138,13 @@ class TicketServiceImplTest {
     void returnedSummaryContainsCorrectValues() {
         var service = serviceWithMocks(mock(TicketPaymentService.class), mock(SeatReservationService.class));
 
-        PurchaseSummary summary = service.purchaseTickets(
+        var receipt = service.purchaseTickets(
                 VALID_ACCOUNT_ID,
                 new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2),
                 new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1),
                 new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)
         );
+        PurchaseSummary summary = receipt.summary();
 
         assertEquals(2, summary.adults());
         assertEquals(1, summary.children());
@@ -235,6 +237,7 @@ class TicketServiceImplTest {
                 seatReservationService,
                 purchaseRepository,
                 PRICING,
+                new BookingIdGenerator(),
                 new AccountIdValidator(),
                 new TicketTypeRequestsValidator(),
                 new BusinessRulesValidator(25)

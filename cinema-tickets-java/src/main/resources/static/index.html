@@ -565,26 +565,24 @@
     }
 
     function renderSuccess(dto) {
-      const isDuplicate = dto.message && dto.message.toLowerCase().includes('already');
-      const panelClass = isDuplicate ? 'warn' : 'ok';
-      const icon = isDuplicate ? '&#9888;&#65039;' : '&#9989;';
-      const title = isDuplicate ? 'Ticket already purchased' : 'Purchase confirmed';
-      const subtitle = isDuplicate
-        ? 'This account already has a booking. Here are the existing ticket details:'
-        : '';
+      const panelClass = 'ok';
+      const icon = '&#9989;';
+      const title = 'Purchase confirmed';
+      const subtitle = '';
 
       resultEl.innerHTML = `
         <div class="result-panel card ${panelClass}">
           <div class="result-title">${icon} ${esc(title)}</div>
           ${subtitle ? `<div class="result-subtitle" style="font-size:0.85rem;margin:-0.35rem 0 0.75rem;">${esc(subtitle)}</div>` : ''}
           <div class="result-grid">
+            <div class="result-row"><span>Booking ID</span><b>${esc(dto.bookingId || '—')}</b></div>
             <div class="result-row"><span>Account</span><b>${esc(dto.accountId)}</b></div>
             <div class="result-row"><span>Total tickets</span><b>${esc(dto.totalTickets)}</b></div>
             <div class="result-row"><span>Adults</span><b>${esc(dto.adults)}</b></div>
             <div class="result-row"><span>Children</span><b>${esc(dto.children)}</b></div>
             <div class="result-row"><span>Infants</span><b>${esc(dto.infants)}</b></div>
             <div class="result-row highlight"><span>Seats allocated</span><b>${esc(dto.totalSeatsToAllocate)}</b></div>
-            <div class="result-row highlight"><span>${isDuplicate ? 'Amount previously paid' : 'Amount paid'}</span><b>&pound;${esc(dto.totalAmountToPay)}</b></div>
+            <div class="result-row highlight"><span>Amount paid</span><b>&pound;${esc(dto.totalAmountToPay)}</b></div>
           </div>
         </div>`;
       rawToggle.hidden = false;
@@ -626,6 +624,7 @@
       const rows = purchases.map(p => {
         const date = p.createdAt ? new Date(p.createdAt).toLocaleString() : '\u2014';
         return `<tr>
+          <td>${esc(String(p.bookingId || '\u2014'))}</td>
           <td>${esc(String(p.accountId))}</td>
           <td>${esc(String(p.adults))}</td>
           <td>${esc(String(p.children))}</td>
@@ -641,6 +640,7 @@
         <table class="purchases-table">
           <thead>
             <tr>
+              <th>Booking ID</th>
               <th>Account</th>
               <th>Adults</th>
               <th>Children</th>

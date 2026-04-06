@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,7 +40,7 @@ class PurchaseIntegrationTest {
     }
 
     @Test
-    void repeatPurchaseForSameAccountReturnsExistingPurchase() throws Exception {
+    void repeatPurchaseForSameAccountCreatesMultipleBookings() throws Exception {
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -47,6 +48,7 @@ class PurchaseIntegrationTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accountId").value(99))
+                .andExpect(jsonPath("$.bookingId").value(startsWith("T-")))
                 .andExpect(jsonPath("$.totalAmountToPay").value(25));
 
         mvc.perform(post("/api/purchases")
@@ -54,10 +56,11 @@ class PurchaseIntegrationTest {
                         .content("""
                                 {"accountId":99,"adultCount":1,"childCount":0,"infantCount":0}
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accountId").value(99))
+                .andExpect(jsonPath("$.bookingId").value(startsWith("T-")))
                 .andExpect(jsonPath("$.totalAmountToPay").value(25))
-                .andExpect(jsonPath("$.message").value("Ticket already purchased"));
+                .andExpect(jsonPath("$.message").value("Purchase confirmed"));
     }
 
     @Test

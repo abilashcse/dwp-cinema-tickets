@@ -91,7 +91,10 @@ class PurchaseControllerTest {
     void returns201AndCallsTicketService() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
-                .thenReturn(new PurchaseSummary(2, 1, 1, 4, 65, 3));
+                .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
+                        "T-100",
+                        new PurchaseSummary(2, 1, 1, 4, 65, 3)
+                ));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -99,6 +102,7 @@ class PurchaseControllerTest {
                                 {"accountId":123,"adultCount":2,"childCount":1,"infantCount":1}
                                 """))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").value("T-100"))
                 .andExpect(jsonPath("$.accountId").value(123))
                 .andExpect(jsonPath("$.totalAmountToPay").value(65))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
@@ -106,29 +110,6 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.message").value("Purchase confirmed"));
 
         verify(ticketService).purchaseTickets(anyLong(), any(TicketTypeRequest[].class));
-    }
-
-    @Test
-    void returns200AndExistingPurchaseWhenAccountAlreadyPurchased() throws Exception {
-        when(purchaseRepository.findAll()).thenReturn(List.of(
-                new uk.gov.dwp.uc.pairtest.domain.Purchase(
-                        123L, 2, 1, 0, 3, 65, 3, Instant.parse("2026-04-06T12:00:00Z")
-                )
-        ));
-
-        mvc.perform(post("/api/purchases")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"accountId":123,"adultCount":2,"childCount":1,"infantCount":0}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountId").value(123))
-                .andExpect(jsonPath("$.totalTickets").value(3))
-                .andExpect(jsonPath("$.totalAmountToPay").value(65))
-                .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
-                .andExpect(jsonPath("$.message").value("Ticket already purchased"));
-
-        verify(ticketService, never()).purchaseTickets(anyLong(), any());
     }
 
     @Test
@@ -312,7 +293,10 @@ class PurchaseControllerTest {
     void returns201ForAdultsOnly() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
-                .thenReturn(new PurchaseSummary(3, 0, 0, 3, 75, 3));
+                .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
+                        "b-2",
+                        new PurchaseSummary(3, 0, 0, 3, 75, 3)
+                ));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -320,6 +304,7 @@ class PurchaseControllerTest {
                                 {"accountId":1,"adultCount":3,"childCount":0,"infantCount":0}
                                 """))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").value("b-2"))
                 .andExpect(jsonPath("$.adults").value(3))
                 .andExpect(jsonPath("$.totalAmountToPay").value(75))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
@@ -331,7 +316,10 @@ class PurchaseControllerTest {
     void infantsDoNotContributeToPaymentOrSeats() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
-                .thenReturn(new PurchaseSummary(2, 0, 2, 4, 50, 2));
+                .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
+                        "b-3",
+                        new PurchaseSummary(2, 0, 2, 4, 50, 2)
+                ));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -339,6 +327,7 @@ class PurchaseControllerTest {
                                 {"accountId":1,"adultCount":2,"childCount":0,"infantCount":2}
                                 """))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").value("b-3"))
                 .andExpect(jsonPath("$.totalAmountToPay").value(50))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(2))
                 .andExpect(jsonPath("$.totalTickets").value(4))
@@ -349,7 +338,10 @@ class PurchaseControllerTest {
     void oneAdultOneInfantOnLap() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
-                .thenReturn(new PurchaseSummary(1, 0, 1, 2, 25, 1));
+                .thenReturn(new uk.gov.dwp.uc.pairtest.validation.PurchaseReceipt(
+                        "b-4",
+                        new PurchaseSummary(1, 0, 1, 2, 25, 1)
+                ));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -357,6 +349,7 @@ class PurchaseControllerTest {
                                 {"accountId":1,"adultCount":1,"childCount":0,"infantCount":1}
                                 """))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").value("b-4"))
                 .andExpect(jsonPath("$.adults").value(1))
                 .andExpect(jsonPath("$.infants").value(1))
                 .andExpect(jsonPath("$.totalAmountToPay").value(25))
@@ -392,18 +385,20 @@ class PurchaseControllerTest {
     void getAllPurchasesReturnsSavedPurchases() throws Exception {
         when(purchaseRepository.findAll()).thenReturn(List.of(
                 new uk.gov.dwp.uc.pairtest.domain.Purchase(
-                        1L, 2, 1, 0, 3, 65, 3, Instant.parse("2026-04-06T12:00:00Z")
+                        "b-10", 1L, 2, 1, 0, 3, 65, 3, Instant.parse("2026-04-06T12:00:00Z")
                 ),
                 new uk.gov.dwp.uc.pairtest.domain.Purchase(
-                        2L, 1, 0, 1, 2, 25, 1, Instant.parse("2026-04-06T13:00:00Z")
+                        "b-11", 2L, 1, 0, 1, 2, 25, 1, Instant.parse("2026-04-06T13:00:00Z")
                 )
         ));
 
         mvc.perform(get("/api/purchases").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].bookingId").value("b-10"))
                 .andExpect(jsonPath("$[0].accountId").value(1))
                 .andExpect(jsonPath("$[0].totalAmountToPay").value(65))
+                .andExpect(jsonPath("$[1].bookingId").value("b-11"))
                 .andExpect(jsonPath("$[1].accountId").value(2))
                 .andExpect(jsonPath("$[1].totalAmountToPay").value(25));
     }
