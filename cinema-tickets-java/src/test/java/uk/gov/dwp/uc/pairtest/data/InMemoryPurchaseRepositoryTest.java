@@ -17,7 +17,7 @@ class InMemoryPurchaseRepositoryTest {
 
     @Test
     void savePersistsPurchase() {
-        Purchase purchase = Purchase.of(1L, 2, 1, 0, 3, 50, 3);
+        Purchase purchase = Purchase.of(1L, 2, 1, 0, 3, 65, 3);
         repo.save(purchase);
 
         assertEquals(1, repo.findAll().size());
@@ -26,8 +26,8 @@ class InMemoryPurchaseRepositoryTest {
 
     @Test
     void saveMultiplePurchases() {
-        Purchase first = Purchase.of(1L, 1, 0, 0, 1, 20, 1);
-        Purchase second = Purchase.of(2L, 2, 1, 1, 4, 50, 3);
+        Purchase first = Purchase.of(1L, 1, 0, 0, 1, 25, 1);
+        Purchase second = Purchase.of(2L, 2, 1, 1, 4, 65, 3);
 
         repo.save(first);
         repo.save(second);
@@ -39,10 +39,10 @@ class InMemoryPurchaseRepositoryTest {
 
     @Test
     void findAllReturnsImmutableSnapshot() {
-        repo.save(Purchase.of(1L, 1, 0, 0, 1, 20, 1));
+        repo.save(Purchase.of(1L, 1, 0, 0, 1, 25, 1));
 
         var snapshot = repo.findAll();
-        repo.save(Purchase.of(2L, 1, 0, 0, 1, 20, 1));
+        repo.save(Purchase.of(2L, 1, 0, 0, 1, 25, 1));
 
         assertEquals(1, snapshot.size(), "Snapshot should not reflect later additions");
         assertEquals(2, repo.findAll().size());

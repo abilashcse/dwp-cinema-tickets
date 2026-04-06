@@ -95,8 +95,8 @@ Configuration in `application.properties`:
 ## Pricing & seats
 
 - **Prices**:
-  - Adult: 20
-  - Child: 10
+  - Adult: 25
+  - Child: 15
   - Infant: 0
 - **Seats allocated**: adult + child (infants do not allocate seats)
 

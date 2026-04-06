@@ -3,8 +3,8 @@ package uk.gov.dwp.uc.pairtest;
 import org.springframework.stereotype.Service;
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
+import uk.gov.dwp.uc.pairtest.config.TicketPricingProperties;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
-import uk.gov.dwp.uc.pairtest.domain.TicketPrice;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
@@ -20,6 +20,7 @@ public class TicketServiceImpl implements TicketService {
     private final TicketPaymentService ticketPaymentService;
     private final SeatReservationService seatReservationService;
     private final PurchaseRepository purchaseRepository;
+    private final TicketPricingProperties ticketPricing;
     private final AccountIdValidator accountIdValidator;
     private final TicketTypeRequestsValidator ticketTypeRequestsValidator;
     private final BusinessRulesValidator businessRulesValidator;
@@ -27,12 +28,14 @@ public class TicketServiceImpl implements TicketService {
     public TicketServiceImpl(TicketPaymentService ticketPaymentService,
                              SeatReservationService seatReservationService,
                              PurchaseRepository purchaseRepository,
+                             TicketPricingProperties ticketPricing,
                              AccountIdValidator accountIdValidator,
                              TicketTypeRequestsValidator ticketTypeRequestsValidator,
                              BusinessRulesValidator businessRulesValidator) {
         this.ticketPaymentService = ticketPaymentService;
         this.seatReservationService = seatReservationService;
         this.purchaseRepository = purchaseRepository;
+        this.ticketPricing = ticketPricing;
         this.accountIdValidator = accountIdValidator;
         this.ticketTypeRequestsValidator = ticketTypeRequestsValidator;
         this.businessRulesValidator = businessRulesValidator;
@@ -44,7 +47,7 @@ public class TicketServiceImpl implements TicketService {
         accountIdValidator.validate(request);
         ticketTypeRequestsValidator.validate(request);
 
-        PurchaseSummary summary = summarize(ticketTypeRequests);
+        PurchaseSummary summary = summarize(ticketTypeRequests, ticketPricing);
         businessRulesValidator.validate(summary);
 
         seatReservationService.reserveSeat(accountId, summary.totalSeatsToAllocate());
@@ -63,7 +66,7 @@ public class TicketServiceImpl implements TicketService {
         return summary;
     }
 
-    private static PurchaseSummary summarize(TicketTypeRequest... ticketTypeRequests) {
+    private static PurchaseSummary summarize(TicketTypeRequest[] ticketTypeRequests, TicketPricingProperties ticketPricing) {
         int adults = 0;
         int children = 0;
         int infants = 0;
@@ -77,7 +80,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         int totalTickets = adults + children + infants;
-        int totalAmountToPay = (adults * TicketPrice.ADULT.price()) + (children * TicketPrice.CHILD.price());
+        int totalAmountToPay = (adults * ticketPricing.adult()) + (children * ticketPricing.child());
         int totalSeatsToAllocate = adults + children;
 
         return new PurchaseSummary(adults, children, infants, totalTickets, totalAmountToPay, totalSeatsToAllocate);

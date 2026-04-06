@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
+import uk.gov.dwp.uc.pairtest.config.TicketPricingProperties;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
@@ -20,6 +21,22 @@ import static org.mockito.Mockito.*;
 class TicketServiceImplTest {
 
     private static final long VALID_ACCOUNT_ID = 123L;
+    private static final TicketPricingProperties PRICING = loadPricingFromProperties();
+
+    private static TicketPricingProperties loadPricingFromProperties() {
+        try (var in = TicketServiceImplTest.class.getClassLoader().getResourceAsStream("application.properties")) {
+            var props = new java.util.Properties();
+            if (in != null) {
+                props.load(in);
+            }
+            int adult = Integer.parseInt(props.getProperty("ticket-pricing.adult", "25"));
+            int child = Integer.parseInt(props.getProperty("ticket-pricing.child", "15"));
+            int infant = Integer.parseInt(props.getProperty("ticket-pricing.infant", "0"));
+            return new TicketPricingProperties(adult, child, infant);
+        } catch (Exception e) {
+            return new TicketPricingProperties(25, 15, 0);
+        }
+    }
 
     @Test
     void adultsOnlyChargesAndReservesSeats() {
@@ -33,7 +50,7 @@ class TicketServiceImplTest {
         );
 
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 2);
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 50);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -50,7 +67,7 @@ class TicketServiceImplTest {
         );
 
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 5);
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 70);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 95);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -67,7 +84,7 @@ class TicketServiceImplTest {
         );
 
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 2);
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 50);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -85,7 +102,7 @@ class TicketServiceImplTest {
         );
 
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 2);
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 30);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -112,7 +129,7 @@ class TicketServiceImplTest {
         assertEquals(1, saved.children());
         assertEquals(1, saved.infants());
         assertEquals(3, saved.totalTickets());
-        assertEquals(30, saved.totalAmountToPay());
+        assertEquals(40, saved.totalAmountToPay());
         assertEquals(2, saved.totalSeatsToAllocate());
     }
 
@@ -131,7 +148,7 @@ class TicketServiceImplTest {
         assertEquals(1, summary.children());
         assertEquals(1, summary.infants());
         assertEquals(4, summary.totalTickets());
-        assertEquals(50, summary.totalAmountToPay());
+        assertEquals(65, summary.totalAmountToPay());
         assertEquals(3, summary.totalSeatsToAllocate());
     }
 
@@ -202,7 +219,7 @@ class TicketServiceImplTest {
         );
 
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 1);
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 20);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 25);
     }
 
     private static TicketServiceImpl serviceWithMocks(TicketPaymentService paymentService,
@@ -217,6 +234,7 @@ class TicketServiceImplTest {
                 paymentService,
                 seatReservationService,
                 purchaseRepository,
+                PRICING,
                 new AccountIdValidator(),
                 new TicketTypeRequestsValidator(),
                 new BusinessRulesValidator(25)

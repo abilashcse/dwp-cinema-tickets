@@ -40,7 +40,7 @@ class BusinessRulesValidatorTest {
     @Test
     void rejectsChildWithoutAdult() {
         var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(0, 1, 0, 1, 10, 1);
+        var summary = new PurchaseSummary(0, 1, 0, 1, 15, 1);
 
         assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
     }
@@ -56,7 +56,7 @@ class BusinessRulesValidatorTest {
     @Test
     void rejectsMoreInfantsThanAdults() {
         var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(1, 0, 2, 3, 20, 1);
+        var summary = new PurchaseSummary(1, 0, 2, 3, 25, 1);
 
         assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
     }

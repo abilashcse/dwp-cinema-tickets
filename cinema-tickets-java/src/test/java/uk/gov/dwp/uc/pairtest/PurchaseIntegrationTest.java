@@ -33,7 +33,7 @@ class PurchaseIntegrationTest {
                 .andExpect(jsonPath("$.children").value(1))
                 .andExpect(jsonPath("$.infants").value(1))
                 .andExpect(jsonPath("$.totalTickets").value(4))
-                .andExpect(jsonPath("$.totalAmountToPay").value(50))
+                .andExpect(jsonPath("$.totalAmountToPay").value(65))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
                 .andExpect(jsonPath("$.message").value("Purchase confirmed"));
     }
@@ -47,7 +47,7 @@ class PurchaseIntegrationTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accountId").value(99))
-                .andExpect(jsonPath("$.totalAmountToPay").value(20));
+                .andExpect(jsonPath("$.totalAmountToPay").value(25));
 
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -56,7 +56,7 @@ class PurchaseIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accountId").value(99))
-                .andExpect(jsonPath("$.totalAmountToPay").value(20))
+                .andExpect(jsonPath("$.totalAmountToPay").value(25))
                 .andExpect(jsonPath("$.message").value("Ticket already purchased"));
     }
 
@@ -109,9 +109,9 @@ class PurchaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.maxTicketsPerPurchase").value(25))
                 .andExpect(jsonPath("$.rates[0].type").value("ADULT"))
-                .andExpect(jsonPath("$.rates[0].price").value(20))
+                .andExpect(jsonPath("$.rates[0].price").value(25))
                 .andExpect(jsonPath("$.rates[1].type").value("CHILD"))
-                .andExpect(jsonPath("$.rates[1].price").value(10))
+                .andExpect(jsonPath("$.rates[1].price").value(15))
                 .andExpect(jsonPath("$.rates[2].type").value("INFANT"))
                 .andExpect(jsonPath("$.rates[2].price").value(0));
     }
@@ -148,7 +148,7 @@ class PurchaseIntegrationTest {
         mvc.perform(get("/api/purchases").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[?(@.accountId == 777)].totalAmountToPay").value(30))
+                .andExpect(jsonPath("$[?(@.accountId == 777)].totalAmountToPay").value(40))
                 .andExpect(jsonPath("$[?(@.accountId == 777)].totalSeatsToAllocate").value(2));
     }
 }

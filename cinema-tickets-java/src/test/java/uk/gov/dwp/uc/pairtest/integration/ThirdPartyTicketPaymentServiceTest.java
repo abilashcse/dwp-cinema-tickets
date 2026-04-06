@@ -18,7 +18,7 @@ class ThirdPartyTicketPaymentServiceTest {
         };
         ThirdPartyTicketPaymentService service = new ThirdPartyTicketPaymentService(throwingDelegate);
 
-        assertThrows(PaymentFailedException.class, () -> service.makePayment(1L, 20));
+        assertThrows(PaymentFailedException.class, () -> service.makePayment(1L, 25));
     }
 }
 

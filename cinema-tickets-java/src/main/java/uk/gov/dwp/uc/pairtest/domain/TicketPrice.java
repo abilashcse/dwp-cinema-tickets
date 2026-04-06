@@ -1,19 +1,15 @@
 package uk.gov.dwp.uc.pairtest.domain;
 
+/**
+ * Kept for backwards compatibility with earlier iterations of the kata.
+ *
+ * Pricing is now configured via application properties (`ticket-pricing.*`) and is injected where needed.
+ */
+@Deprecated(forRemoval = false)
 public enum TicketPrice {
-    ADULT(20),
-    CHILD(10),
-    INFANT(0);
-
-    private final int price;
-
-    TicketPrice(int price) {
-        this.price = price;
-    }
-
-    public int price() {
-        return price;
-    }
+    ADULT,
+    CHILD,
+    INFANT;
 
     public static TicketPrice from(TicketTypeRequest.Type type) {
         return switch (type) {
