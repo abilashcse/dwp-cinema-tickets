@@ -32,6 +32,17 @@ This generates an HTML coverage report at:
 
 - `target/site/jacoco/index.html`
 
+## Rate limiting
+
+Requests to `/api/*` are rate-limited (token bucket). When exceeded, the API returns **HTTP 429** with a JSON `ApiErrorResponse` payload.
+
+Configuration in `application.properties`:
+
+- `feature.rate-limit.enabled`: enable/disable (default: `true`)
+- `rate-limit.capacity`: bucket size (default: `5`)
+- `rate-limit.refill-tokens`: tokens refilled per period (default: `5`)
+- `rate-limit.refill-period`: ISO-8601 duration (default: `PT10S`)
+
 ## Business rules enforced
 
 - `accountId` must be non-null and `> 0`
