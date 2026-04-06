@@ -1,0 +1,54 @@
+# Cinema Tickets (Java)
+
+This module implements the cinema ticket purchase kata:
+
+- Validates purchases against the exercise rules
+- Calculates total amount + seats
+- Calls the provided third-party services
+- Persists successful purchases via a repository port (clean-architecture style)
+
+## Requirements
+
+- Java 21
+- Maven 3.x
+
+## Run tests
+
+From `cinema-tickets-java/`:
+
+```bash
+mvn test
+```
+
+## Business rules enforced
+
+- `accountId` must be non-null and `> 0`
+- At least one `TicketTypeRequest` must be supplied
+- Each request must have:
+  - non-null type
+  - ticket count `> 0`
+- Total tickets (adult + child + infant) must be `<= 25`
+- Child and/or infant tickets require at least 1 adult ticket
+
+## Pricing & seats
+
+- **Prices**:
+  - Adult: 20
+  - Child: 10
+  - Infant: 0
+- **Seats allocated**: adult + child (infants do not allocate seats)
+
+## Code structure (clean architecture-ish)
+
+- **Use case / orchestration**: `uk.gov.dwp.uc.pairtest.TicketServiceImpl`
+- **Domain**:
+  - `uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest`
+  - `uk.gov.dwp.uc.pairtest.domain.TicketPrice`
+  - `uk.gov.dwp.uc.pairtest.domain.Purchase`
+- **Validation**: `uk.gov.dwp.uc.pairtest.validation.*` (validator pattern)
+- **Port**: `uk.gov.dwp.uc.pairtest.repository.PurchaseRepository`
+- **Adapters**:
+  - `uk.gov.dwp.uc.pairtest.repository.NoOpPurchaseRepository` (default)
+  - `uk.gov.dwp.uc.pairtest.data.InMemoryPurchaseRepository`
+- **Third-party services (do not edit)**: `thirdparty.*`
+
