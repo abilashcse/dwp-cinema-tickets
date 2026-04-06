@@ -80,4 +80,24 @@ class PurchaseIntegrationTest {
                 .andExpect(jsonPath("$.rates[2].type").value("INFANT"))
                 .andExpect(jsonPath("$.rates[2].price").value(0));
     }
+
+    @Test
+    void unsupportedMediaTypeReturnsApiErrorResponse() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hi"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.message").value("Unsupported Content-Type. Expected application/json"));
+    }
+
+    @Test
+    void malformedJsonReturnsApiErrorResponse() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Malformed or missing JSON request body"));
+    }
 }

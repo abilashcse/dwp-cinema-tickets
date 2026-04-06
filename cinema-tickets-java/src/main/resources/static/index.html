@@ -424,6 +424,33 @@
       return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
     }
 
+    function normaliseErrorPayload(payload, httpStatus) {
+      if (payload && typeof payload === 'object') {
+        // Our API shape: { message, fieldErrors, ruleViolations }
+        if ('message' in payload) {
+          return {
+            message: payload.message,
+            fieldErrors: Array.isArray(payload.fieldErrors) ? payload.fieldErrors : [],
+            ruleViolations: Array.isArray(payload.ruleViolations) ? payload.ruleViolations : [],
+          };
+        }
+
+        // Spring Boot default error shape: { status, error, message?, path?, timestamp? }
+        const msg =
+          payload.message ||
+          payload.error ||
+          (httpStatus >= 500 ? 'Something went wrong on our end. Please try again.' : 'Request failed');
+
+        return { message: msg, fieldErrors: [], ruleViolations: [] };
+      }
+
+      return {
+        message: httpStatus >= 500 ? 'Something went wrong on our end. Please try again.' : 'Request failed',
+        fieldErrors: [],
+        ruleViolations: [],
+      };
+    }
+
     function renderErrors({ message, fieldErrors = [], ruleViolations = [] }) {
       const items = [];
       for (const err of fieldErrors) items.push(`<li><b>${esc(err.field)}</b>: ${esc(err.message)}</li>`);
@@ -500,7 +527,7 @@
           renderSuccess(json);
         } else {
           statusEl.textContent = 'Error ' + res.status;
-          renderErrors(json || { message: 'Request failed' });
+          renderErrors(normaliseErrorPayload(json, res.status));
         }
       } catch (err) {
         statusEl.textContent = 'Network error';

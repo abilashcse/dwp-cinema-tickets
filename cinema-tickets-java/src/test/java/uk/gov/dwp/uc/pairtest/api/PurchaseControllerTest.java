@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.dwp.uc.pairtest.TicketService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
+import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -98,6 +100,52 @@ class PurchaseControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns415ForUnsupportedMediaType() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hi"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.message").value("Unsupported Content-Type. Expected application/json"));
+    }
+
+    @Test
+    void returns405ForMethodNotAllowed() throws Exception {
+        mvc.perform(get("/api/purchases"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.message").value("Method not allowed"));
+    }
+
+    @Test
+    void returns500ForUnexpectedException() throws Exception {
+        doThrow(new RuntimeException("boom"))
+                .when(ticketService)
+                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":1,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+    }
+
+    @Test
+    void returns500ForPaymentFailure() throws Exception {
+        doThrow(new PaymentFailedException("Payment failed", new RuntimeException("boom")))
+                .when(ticketService)
+                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":1,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Payment processing failed"));
     }
 
     @Test

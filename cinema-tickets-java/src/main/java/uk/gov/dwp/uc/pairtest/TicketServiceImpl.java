@@ -7,7 +7,6 @@ import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketPrice;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
-import uk.gov.dwp.uc.pairtest.repository.NoOpPurchaseRepository;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 import uk.gov.dwp.uc.pairtest.validation.AccountIdValidator;
 import uk.gov.dwp.uc.pairtest.validation.BusinessRulesValidator;
@@ -18,32 +17,36 @@ import uk.gov.dwp.uc.pairtest.validation.TicketTypeRequestsValidator;
 
 @Service
 public class TicketServiceImpl implements TicketService {
-   
 
-    private static final int MAX_TICKETS_PER_PURCHASE = 25;
-
-    private TicketPaymentService ticketPaymentService;
-
-    private SeatReservationService seatReservationService;
-
-    private PurchaseRepository purchaseRepository = new NoOpPurchaseRepository();
+    private final TicketPaymentService ticketPaymentService;
+    private final SeatReservationService seatReservationService;
+    private final PurchaseRepository purchaseRepository;
+    private final AccountIdValidator accountIdValidator;
+    private final TicketTypeRequestsValidator ticketTypeRequestsValidator;
+    private final BusinessRulesValidator businessRulesValidator;
 
     public TicketServiceImpl(TicketPaymentService ticketPaymentService,
                              SeatReservationService seatReservationService,
-                             PurchaseRepository purchaseRepository) {
+                             PurchaseRepository purchaseRepository,
+                             AccountIdValidator accountIdValidator,
+                             TicketTypeRequestsValidator ticketTypeRequestsValidator,
+                             BusinessRulesValidator businessRulesValidator) {
         this.ticketPaymentService = ticketPaymentService;
         this.seatReservationService = seatReservationService;
-        this.purchaseRepository = purchaseRepository == null ? new NoOpPurchaseRepository() : purchaseRepository;
+        this.purchaseRepository = purchaseRepository;
+        this.accountIdValidator = accountIdValidator;
+        this.ticketTypeRequestsValidator = ticketTypeRequestsValidator;
+        this.businessRulesValidator = businessRulesValidator;
     }
 
     @Override
     public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
         PurchaseRequest request = new PurchaseRequest(accountId, ticketTypeRequests);
-        new AccountIdValidator().validate(request);
-        new TicketTypeRequestsValidator().validate(request);
+        accountIdValidator.validate(request);
+        ticketTypeRequestsValidator.validate(request);
 
         PurchaseSummary summary = summarize(ticketTypeRequests);
-        new BusinessRulesValidator(MAX_TICKETS_PER_PURCHASE).validate(new PurchaseContext(accountId, ticketTypeRequests, summary));
+        businessRulesValidator.validate(new PurchaseContext(accountId, ticketTypeRequests, summary));
 
         ticketPaymentService.makePayment(accountId, summary.totalAmountToPay());
         seatReservationService.reserveSeat(accountId, summary.totalSeatsToAllocate());

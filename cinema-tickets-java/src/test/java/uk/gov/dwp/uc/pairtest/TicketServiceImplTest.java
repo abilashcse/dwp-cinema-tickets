@@ -196,6 +196,13 @@ class TicketServiceImplTest {
     private static TicketServiceImpl serviceWithMocks(TicketPaymentService paymentService,
                                                      SeatReservationService seatReservationService,
                                                      PurchaseRepository purchaseRepository) {
-        return new TicketServiceImpl(paymentService, seatReservationService, purchaseRepository);
+        return new TicketServiceImpl(
+                paymentService,
+                seatReservationService,
+                purchaseRepository,
+                new AccountIdValidator(),
+                new TicketTypeRequestsValidator(),
+                new BusinessRulesValidator(25)
+        );
     }
 }

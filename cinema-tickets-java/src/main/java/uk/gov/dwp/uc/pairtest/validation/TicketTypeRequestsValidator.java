@@ -1,8 +1,10 @@
 package uk.gov.dwp.uc.pairtest.validation;
 
+import org.springframework.stereotype.Component;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 
+@Component
 public final class TicketTypeRequestsValidator implements PurchaseValidator<PurchaseRequest> {
     @Override
     public void validate(PurchaseRequest request) throws InvalidPurchaseException {
