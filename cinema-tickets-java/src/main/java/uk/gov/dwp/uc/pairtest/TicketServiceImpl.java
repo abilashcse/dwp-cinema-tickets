@@ -1,5 +1,6 @@
 package uk.gov.dwp.uc.pairtest;
 
+import org.springframework.stereotype.Service;
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
@@ -15,6 +16,7 @@ import uk.gov.dwp.uc.pairtest.validation.PurchaseRequest;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 import uk.gov.dwp.uc.pairtest.validation.TicketTypeRequestsValidator;
 
+@Service
 public class TicketServiceImpl implements TicketService {
    
 
@@ -25,6 +27,14 @@ public class TicketServiceImpl implements TicketService {
     private SeatReservationService seatReservationService;
 
     private PurchaseRepository purchaseRepository = new NoOpPurchaseRepository();
+
+    public TicketServiceImpl(TicketPaymentService ticketPaymentService,
+                             SeatReservationService seatReservationService,
+                             PurchaseRepository purchaseRepository) {
+        this.ticketPaymentService = ticketPaymentService;
+        this.seatReservationService = seatReservationService;
+        this.purchaseRepository = purchaseRepository == null ? new NoOpPurchaseRepository() : purchaseRepository;
+    }
 
     @Override
     public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {

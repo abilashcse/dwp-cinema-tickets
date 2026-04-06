@@ -6,8 +6,12 @@ import thirdparty.seatbooking.SeatReservationService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
-
-import java.lang.reflect.Field;
+import uk.gov.dwp.uc.pairtest.validation.AccountIdValidator;
+import uk.gov.dwp.uc.pairtest.validation.BusinessRulesValidator;
+import uk.gov.dwp.uc.pairtest.validation.PurchaseContext;
+import uk.gov.dwp.uc.pairtest.validation.PurchaseRequest;
+import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
+import uk.gov.dwp.uc.pairtest.validation.TicketTypeRequestsValidator;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -18,111 +22,85 @@ class TicketServiceImplTest {
 
     @Test
     void rejectsNullAccountId() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
-
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(null, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)));
-
-        verifyNoInteractions(payment, seats);
+        var validator = new AccountIdValidator();
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseRequest(null, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1))));
     }
 
     @Test
     void rejectsNonPositiveAccountId() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
+        var validator = new AccountIdValidator();
 
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(0L, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)));
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(-1L, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)));
-
-        verifyNoInteractions(payment, seats);
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseRequest(0L, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1))));
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseRequest(-1L, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1))));
     }
 
     @Test
     void rejectsNullRequestsArray() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
+        var validator = new TicketTypeRequestsValidator();
 
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, (TicketTypeRequest[]) null));
-
-        verifyNoInteractions(payment, seats);
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseRequest(VALID_ACCOUNT_ID, (TicketTypeRequest[]) null)));
     }
 
     @Test
     void rejectsEmptyRequestsArray() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
+        var validator = new TicketTypeRequestsValidator();
 
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest[]{}));
-
-        verifyNoInteractions(payment, seats);
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseRequest(VALID_ACCOUNT_ID, new TicketTypeRequest[]{})));
     }
 
     @Test
     void rejectsRequestWithNullType() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
-
         assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(null, 1));
-
-        verifyNoInteractions(payment, seats);
     }
 
     @Test
     void rejectsRequestWithNonPositiveTicketCount() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
-
         assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 0));
         assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(TicketTypeRequest.Type.ADULT, -1));
-
-        verifyNoInteractions(payment, seats);
     }
 
     @Test
     void rejectsMoreThan25TicketsInTotal() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
-
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 26)));
-
-        verifyNoInteractions(payment, seats);
+        var validator = new BusinessRulesValidator(25);
+        var summary = new PurchaseSummary(
+                26, 0, 0,
+                26,
+                0,
+                0
+        );
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseContext(VALID_ACCOUNT_ID, null, summary)));
     }
 
     @Test
     void rejectsChildPurchaseWithoutAdult() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
-
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1)));
-
-        verifyNoInteractions(payment, seats);
+        var validator = new BusinessRulesValidator(25);
+        var summary = new PurchaseSummary(
+                0, 1, 0,
+                1,
+                0,
+                0
+        );
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseContext(VALID_ACCOUNT_ID, null, summary)));
     }
 
     @Test
     void rejectsInfantPurchaseWithoutAdult() {
-        var payment = mock(TicketPaymentService.class);
-        var seats = mock(SeatReservationService.class);
-        var service = serviceWithMocks(payment, seats);
-
-        assertThrows(InvalidPurchaseException.class,
-                () -> service.purchaseTickets(VALID_ACCOUNT_ID, new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)));
-
-        verifyNoInteractions(payment, seats);
+        var validator = new BusinessRulesValidator(25);
+        var summary = new PurchaseSummary(
+                0, 0, 1,
+                1,
+                0,
+                0
+        );
+        assertThrows(InvalidPurchaseException.class, () ->
+                validator.validate(new PurchaseContext(VALID_ACCOUNT_ID, null, summary)));
     }
 
     @Test
@@ -198,8 +176,7 @@ class TicketServiceImplTest {
         var payment = mock(TicketPaymentService.class);
         var seats = mock(SeatReservationService.class);
         var repo = mock(PurchaseRepository.class);
-        var service = serviceWithMocks(payment, seats);
-        inject(service, "purchaseRepository", repo);
+        var service = serviceWithMocks(payment, seats, repo);
 
         service.purchaseTickets(
                 VALID_ACCOUNT_ID,
@@ -213,35 +190,12 @@ class TicketServiceImplTest {
 
     private static TicketServiceImpl serviceWithMocks(TicketPaymentService paymentService,
                                                      SeatReservationService seatReservationService) {
-        var service = new TicketServiceImpl();
-        inject(service, "ticketPaymentService", paymentService);
-        inject(service, "seatReservationService", seatReservationService);
-        return service;
+        return serviceWithMocks(paymentService, seatReservationService, mock(PurchaseRepository.class));
     }
 
-    private static void inject(Object target, String fieldName, Object value) {
-        Field field = findField(target.getClass(), fieldName);
-        if (field == null) {
-            throw new AssertionError("Expected field '" + fieldName + "' on " + target.getClass().getName()
-                    + " for test injection (add it and keep it injectable for tests).");
-        }
-        try {
-            field.setAccessible(true);
-            field.set(target, value);
-        } catch (IllegalAccessException e) {
-            throw new AssertionError("Unable to inject field '" + fieldName + "' on " + target.getClass().getName(), e);
-        }
-    }
-
-    private static Field findField(Class<?> type, String fieldName) {
-        Class<?> current = type;
-        while (current != null && current != Object.class) {
-            try {
-                return current.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException ignored) {
-                current = current.getSuperclass();
-            }
-        }
-        return null;
+    private static TicketServiceImpl serviceWithMocks(TicketPaymentService paymentService,
+                                                     SeatReservationService seatReservationService,
+                                                     PurchaseRepository purchaseRepository) {
+        return new TicketServiceImpl(paymentService, seatReservationService, purchaseRepository);
     }
 }

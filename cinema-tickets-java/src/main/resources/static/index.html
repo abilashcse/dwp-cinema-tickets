@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cinema Tickets</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 2rem; max-width: 720px; }
+    h1 { margin: 0 0 0.5rem; }
+    .muted { color: #555; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; margin-top: 1.25rem; }
+    label { display: grid; gap: 0.25rem; font-weight: 600; }
+    input { padding: 0.5rem; font-size: 1rem; }
+    .row { grid-column: 1 / -1; display: flex; gap: 0.75rem; align-items: center; }
+    button { padding: 0.6rem 0.9rem; font-size: 1rem; cursor: pointer; }
+    pre { background: #f6f8fa; padding: 0.75rem; overflow: auto; border-radius: 6px; }
+    .links a { margin-right: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Cinema Tickets</h1>
+  <div class="muted">Purchase tickets via the API.</div>
+
+  <div class="links" style="margin-top: 0.75rem;">
+    <a href="/swagger-ui/index.html">Swagger UI</a>
+    <a href="/v3/api-docs">OpenAPI JSON</a>
+    <a href="/actuator/health">Health</a>
+  </div>
+
+  <form id="purchaseForm">
+    <label>
+      Account ID
+      <input name="accountId" type="number" min="1" required value="123" />
+    </label>
+    <div></div>
+    <label>
+      Adults
+      <input name="adultCount" type="number" min="0" required value="1" />
+    </label>
+    <label>
+      Children
+      <input name="childCount" type="number" min="0" required value="0" />
+    </label>
+    <label>
+      Infants
+      <input name="infantCount" type="number" min="0" required value="0" />
+    </label>
+    <div></div>
+    <div class="row">
+      <button type="submit">Purchase</button>
+      <span class="muted" id="status"></span>
+    </div>
+  </form>
+
+  <h2 style="margin-top: 1.25rem;">Response</h2>
+  <pre id="out">{}</pre>
+
+  <script>
+    const form = document.getElementById('purchaseForm');
+    const out = document.getElementById('out');
+    const statusEl = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusEl.textContent = 'Submitting...';
+      out.textContent = '{}';
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      const body = {
+        accountId: Number(data.accountId),
+        adultCount: Number(data.adultCount),
+        childCount: Number(data.childCount),
+        infantCount: Number(data.infantCount),
+      };
+
+      try {
+        const res = await fetch('/api/purchases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const json = await res.json().catch(() => ({}));
+        out.textContent = JSON.stringify(json, null, 2);
+        statusEl.textContent = res.ok ? 'OK' : ('Error ' + res.status);
+      } catch (err) {
+        statusEl.textContent = 'Network error';
+        out.textContent = String(err);
+      }
+    });
+  </script>
+</body>
+</html>
+
