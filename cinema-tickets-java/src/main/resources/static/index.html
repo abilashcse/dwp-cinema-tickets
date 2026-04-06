@@ -229,11 +229,89 @@
 
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
+    .history-section {
+      max-width: 1100px;
+      margin: 1.5rem auto 2.5rem;
+      padding: 0 1.25rem;
+    }
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .history-header h2 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 0.4rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-secondary:hover { background: rgba(79,70,229,.06); }
+    .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .purchases-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.86rem;
+    }
+    .purchases-table thead th {
+      background: var(--bg);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.65rem 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    .purchases-table thead th:first-child { border-radius: var(--radius) 0 0 0; }
+    .purchases-table thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+    .purchases-table tbody td {
+      padding: 0.6rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .purchases-table tbody tr:last-child td { border-bottom: none; }
+    .purchases-table tbody tr:hover td { background: rgba(79,70,229,.03); }
+    .purchases-table .amount { font-weight: 700; color: var(--primary); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-ticket { background: rgba(79,70,229,.1); color: var(--primary); }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+    .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
     @media (max-width: 740px) {
       .layout { grid-template-columns: 1fr; }
       .ticket-fields { grid-template-columns: 1fr; }
       .pricing { grid-template-columns: 1fr; }
       .result-grid { grid-template-columns: 1fr; }
+      .purchases-table { font-size: 0.78rem; }
+      .purchases-table thead th, .purchases-table tbody td { padding: 0.5rem 0.5rem; }
     }
   </style>
 </head>
@@ -315,6 +393,21 @@
     </section>
 
   </main>
+
+  <section class="history-section">
+    <div class="card">
+      <div class="history-header">
+        <h2>Purchased Tickets</h2>
+        <button type="button" class="btn-secondary" id="refreshBtn">Refresh</button>
+      </div>
+      <div id="purchasesTable">
+        <div class="empty-state">
+          <div class="icon" aria-hidden="true">&#128218;</div>
+          <div>Loading purchases&hellip;</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <script>
     const form = document.getElementById('purchaseForm');
@@ -497,6 +590,74 @@
       rawToggle.hidden = false;
     }
 
+    const purchasesTableEl = document.getElementById('purchasesTable');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    async function loadPurchases() {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = 'Loading\u2026';
+      try {
+        const res = await fetch('/api/purchases');
+        if (!res.ok) throw new Error('Failed to load purchases');
+        const purchases = await res.json();
+        renderPurchasesTable(purchases);
+      } catch {
+        purchasesTableEl.innerHTML = `
+          <div class="empty-state">
+            <div class="icon" aria-hidden="true">&#9888;&#65039;</div>
+            <div>Failed to load purchases. <a href="#" onclick="loadPurchases();return false;">Retry</a></div>
+          </div>`;
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = 'Refresh';
+      }
+    }
+
+    function renderPurchasesTable(purchases) {
+      if (!purchases.length) {
+        purchasesTableEl.innerHTML = `
+          <div class="empty-state">
+            <div class="icon" aria-hidden="true">&#128218;</div>
+            <div>No tickets purchased yet.<br/>Use the form above to book your first tickets.</div>
+          </div>`;
+        return;
+      }
+
+      const rows = purchases.map(p => {
+        const date = p.createdAt ? new Date(p.createdAt).toLocaleString() : '\u2014';
+        return `<tr>
+          <td>${esc(String(p.accountId))}</td>
+          <td>${esc(String(p.adults))}</td>
+          <td>${esc(String(p.children))}</td>
+          <td>${esc(String(p.infants))}</td>
+          <td><span class="badge badge-ticket">${esc(String(p.totalTickets))}</span></td>
+          <td>${esc(String(p.totalSeatsToAllocate))}</td>
+          <td class="amount">&pound;${esc(String(p.totalAmountToPay))}</td>
+          <td>${esc(date)}</td>
+        </tr>`;
+      }).join('');
+
+      purchasesTableEl.innerHTML = `
+        <table class="purchases-table">
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th>Adults</th>
+              <th>Children</th>
+              <th>Infants</th>
+              <th>Tickets</th>
+              <th>Seats</th>
+              <th>Amount</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    refreshBtn.addEventListener('click', loadPurchases);
+    loadPurchases();
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const totalPrice = estimateTotal.textContent;
@@ -525,6 +686,7 @@
           ruleViolations: clientCheck.violations,
         });
         submitBtn.disabled = false;
+        submitBtn.textContent = 'Purchase Tickets';
         return;
       }
 
@@ -540,6 +702,13 @@
         if (res.ok) {
           statusEl.textContent = '';
           renderSuccess(json);
+          loadPurchases();
+          if (res.status === 201) {
+            const current = asInt(document.getElementById('accountId').value);
+            if (Number.isFinite(current)) {
+              document.getElementById('accountId').value = String(current + 1);
+            }
+          }
         } else {
           statusEl.textContent = 'Error ' + res.status;
           renderErrors(normaliseErrorPayload(json, res.status));

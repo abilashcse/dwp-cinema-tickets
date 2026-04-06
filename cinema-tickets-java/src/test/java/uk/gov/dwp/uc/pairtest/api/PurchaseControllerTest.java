@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -152,7 +153,9 @@ class PurchaseControllerTest {
 
     @Test
     void returns405ForMethodNotAllowed() throws Exception {
-        mvc.perform(get("/api/purchases"))
+        mvc.perform(put("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(jsonPath("$.message").value("Method not allowed"));
     }
@@ -373,5 +376,35 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.ruleViolations", hasItem("Number of infants cannot exceed number of adults")));
 
         verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void getAllPurchasesReturnsEmptyListWhenNoPurchases() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
+
+        mvc.perform(get("/api/purchases").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void getAllPurchasesReturnsSavedPurchases() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of(
+                new uk.gov.dwp.uc.pairtest.domain.Purchase(
+                        1L, 2, 1, 0, 3, 50, 3, Instant.parse("2026-04-06T12:00:00Z")
+                ),
+                new uk.gov.dwp.uc.pairtest.domain.Purchase(
+                        2L, 1, 0, 1, 2, 20, 1, Instant.parse("2026-04-06T13:00:00Z")
+                )
+        ));
+
+        mvc.perform(get("/api/purchases").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].accountId").value(1))
+                .andExpect(jsonPath("$[0].totalAmountToPay").value(50))
+                .andExpect(jsonPath("$[1].accountId").value(2))
+                .andExpect(jsonPath("$[1].totalAmountToPay").value(20));
     }
 }

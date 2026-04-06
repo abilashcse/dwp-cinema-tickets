@@ -135,4 +135,20 @@ class PurchaseIntegrationTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Malformed or missing JSON request body"));
     }
+
+    @Test
+    void getAllPurchasesReturnsCreatedPurchases() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":777,"adultCount":1,"childCount":1,"infantCount":0}
+                                """))
+                .andExpect(status().isCreated());
+
+        mvc.perform(get("/api/purchases").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.accountId == 777)].totalAmountToPay").value(30))
+                .andExpect(jsonPath("$[?(@.accountId == 777)].totalSeatsToAllocate").value(2));
+    }
 }
