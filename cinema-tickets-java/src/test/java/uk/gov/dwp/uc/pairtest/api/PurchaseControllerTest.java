@@ -89,5 +89,94 @@ class PurchaseControllerTest {
 
         verify(ticketService).purchaseTickets(anyLong(), any(TicketTypeRequest[].class));
     }
+
+    @Test
+    void returns400WhenBodyIsEmpty() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(""))
+                .andExpect(status().isBadRequest());
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns400WhenFieldsAreMissing() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors").isNotEmpty());
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns400WhenNegativeCountsProvided() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":-1,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns400WhenTotalTicketsExceed25() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":20,"childCount":5,"infantCount":1}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.ruleViolations[0]").value("Total tickets must be <= 25"));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns400WhenAllCountsAreZero() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":0,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.ruleViolations[0]").value("At least one ticket must be purchased"));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns200ForAdultsOnly() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":1,"adultCount":3,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.adults").value(3))
+                .andExpect(jsonPath("$.totalAmountToPay").value(60))
+                .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
+                .andExpect(jsonPath("$.totalTickets").value(3));
+    }
+
+    @Test
+    void infantsDoNotContributeToPaymentOrSeats() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":1,"adultCount":1,"childCount":0,"infantCount":2}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAmountToPay").value(20))
+                .andExpect(jsonPath("$.totalSeatsToAllocate").value(1))
+                .andExpect(jsonPath("$.totalTickets").value(3));
+    }
 }
 
