@@ -1,0 +1,41 @@
+# === OS junk ===
+.DS_Store
+Thumbs.db
+
+# === Maven / Java build outputs ===
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/*.ear
+**/hs_err_pid*.log
+
+# === Gradle (in case added later) ===
+**/.gradle/
+**/build/
+
+# === IntelliJ IDEA ===
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+**/out/
+
+# === VS Code / Cursor ===
+**/.vscode/
+**/.cursor/
+
+# === Eclipse ===
+**/.project
+**/.classpath
+**/.settings/
+
+# === Logs ===
+**/*.log
+
+# === Env / secrets (keep local-only) ===
+.env
+.env.*
+
+# === Misc ===
+**/.factorypath
