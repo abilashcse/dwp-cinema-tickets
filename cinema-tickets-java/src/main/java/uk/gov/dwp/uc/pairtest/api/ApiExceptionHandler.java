@@ -15,7 +15,10 @@ import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
 import uk.gov.dwp.uc.pairtest.exception.SeatReservationFailedException;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -24,9 +27,9 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
-        var fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+        var fieldErrors = dedupeFieldErrors(ex.getBindingResult().getFieldErrors().stream()
                 .map(err -> new ApiErrorResponse.ApiFieldError(err.getField(), err.getDefaultMessage()))
-                .toList();
+                .toList());
 
         var body = new ApiErrorResponse(
                 Instant.now(),
@@ -38,6 +41,31 @@ public class ApiExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * One message per field; if multiple constraints apply (e.g. legacy duplicate annotations),
+     * prefer "greater than or equal to 1" over "greater than or equal to 0".
+     */
+    private static List<ApiErrorResponse.ApiFieldError> dedupeFieldErrors(List<ApiErrorResponse.ApiFieldError> errors) {
+        Map<String, String> byField = new LinkedHashMap<>();
+        for (ApiErrorResponse.ApiFieldError e : errors) {
+            String field = e.field();
+            String msg = e.message() == null ? "" : e.message();
+            String cur = byField.get(field);
+            if (cur == null) {
+                byField.put(field, msg);
+            } else if (msg.contains("greater than or equal to 1")) {
+                byField.put(field, msg);
+            } else if (!cur.contains("greater than or equal to 1")) {
+                byField.put(field, msg);
+            }
+        }
+        List<ApiErrorResponse.ApiFieldError> out = new ArrayList<>(byField.size());
+        for (Map.Entry<String, String> e : byField.entrySet()) {
+            out.add(new ApiErrorResponse.ApiFieldError(e.getKey(), e.getValue()));
+        }
+        return out;
     }
 
     @ExceptionHandler(ApiValidationException.class)

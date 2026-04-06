@@ -51,8 +51,9 @@ class PurchaseControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Request validation failed"))
-                .andExpect(jsonPath("$.fieldErrors", hasSize(1)))
-                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("accountId")));
+                .andExpect(jsonPath("$.fieldErrors", hasSize(2)))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("accountId")))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
         verify(ticketService, never()).purchaseTickets(anyLong(), any());
     }
@@ -66,7 +67,8 @@ class PurchaseControllerTest {
                                 {"accountId":123,"adultCount":0,"childCount":1,"infantCount":0}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.ruleViolations[0]").value("Child and/or infant tickets require at least 1 adult ticket"));
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
         verify(ticketService, never()).purchaseTickets(anyLong(), any());
     }
@@ -270,7 +272,8 @@ class PurchaseControllerTest {
                                 {"accountId":123,"adultCount":0,"childCount":0,"infantCount":0}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.ruleViolations[0]").value("At least one ticket must be purchased"));
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
         verify(ticketService, never()).purchaseTickets(anyLong(), any());
     }

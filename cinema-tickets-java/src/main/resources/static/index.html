@@ -498,7 +498,10 @@
       if (!Number.isFinite(body.accountId) || body.accountId < 1) {
         fieldErrors.push({ field: 'accountId', message: 'must be greater than or equal to 1' });
       }
-      for (const f of ['adultCount', 'childCount', 'infantCount']) {
+      if (!Number.isFinite(body.adultCount) || body.adultCount < 1) {
+        fieldErrors.push({ field: 'adultCount', message: 'must be greater than or equal to 1' });
+      }
+      for (const f of ['childCount', 'infantCount']) {
         if (!Number.isFinite(body[f]) || body[f] < 0) {
           fieldErrors.push({ field: f, message: 'must be greater than or equal to 0' });
         }
@@ -508,9 +511,6 @@
       if (Number.isFinite(totalTickets)) {
         if (totalTickets === 0) violations.push('At least one ticket must be purchased');
         if (totalTickets > MAX_TICKETS) violations.push(`Total tickets must be \u2264 ${MAX_TICKETS}`);
-      }
-      if ((body.childCount > 0 || body.infantCount > 0) && body.adultCount === 0) {
-        violations.push('Child and/or infant tickets require at least 1 adult ticket');
       }
       if (body.infantCount > body.adultCount) {
         violations.push('Number of infants cannot exceed number of adults');
@@ -550,9 +550,28 @@
       };
     }
 
+    function dedupeFieldErrorsForDisplay(fieldErrors) {
+      const map = new Map();
+      for (const err of fieldErrors) {
+        const f = err.field;
+        const m = String(err.message || '');
+        const cur = map.get(f);
+        if (cur == null) {
+          map.set(f, m);
+        } else if (m.includes('greater than or equal to 1')) {
+          map.set(f, m);
+        } else if (!cur.includes('greater than or equal to 1')) {
+          map.set(f, m);
+        }
+      }
+      return Array.from(map.entries()).map(([field, message]) => ({ field, message }));
+    }
+
     function renderErrors({ message, fieldErrors = [], ruleViolations = [] }) {
       const items = [];
-      for (const err of fieldErrors) items.push(`<li><b>${esc(err.field)}</b>: ${esc(err.message)}</li>`);
+      for (const err of dedupeFieldErrorsForDisplay(fieldErrors)) {
+        items.push(`<li><b>${esc(err.field)}</b>: ${esc(err.message)}</li>`);
+      }
       for (const v of ruleViolations) items.push(`<li>${esc(v)}</li>`);
 
       resultEl.innerHTML = `

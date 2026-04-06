@@ -92,7 +92,8 @@ class PurchaseIntegrationTest {
                                 {"accountId":1,"adultCount":0,"childCount":2,"infantCount":0}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.ruleViolations[0]").value("Child and/or infant tickets require at least 1 adult ticket"));
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
     }
 
     @Test
