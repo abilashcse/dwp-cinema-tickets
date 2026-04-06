@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.dwp.uc.pairtest.TicketService;
+import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
+import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 
 import java.util.ArrayList;
@@ -20,17 +22,38 @@ import java.util.List;
 public class PurchaseController {
 
     private final TicketService ticketService;
+    private final PurchaseRepository purchaseRepository;
     private final int maxTicketsPerPurchase;
 
     public PurchaseController(TicketService ticketService,
+                              PurchaseRepository purchaseRepository,
                               @Value("${purchase.max-tickets:25}") int maxTicketsPerPurchase) {
         this.ticketService = ticketService;
+        this.purchaseRepository = purchaseRepository;
         this.maxTicketsPerPurchase = maxTicketsPerPurchase;
     }
 
     @PostMapping
     public ResponseEntity<PurchaseResponseDto> purchase(@Valid @RequestBody PurchaseRequestDto body) {
         validateBusinessRules(body);
+
+        Purchase existing = purchaseRepository.findAll().stream()
+                .filter(p -> p.accountId() == body.accountId())
+                .findFirst()
+                .orElse(null);
+
+        if (existing != null) {
+            return ResponseEntity.ok(new PurchaseResponseDto(
+                    existing.accountId(),
+                    existing.adults(),
+                    existing.children(),
+                    existing.infants(),
+                    existing.totalTickets(),
+                    existing.totalAmountToPay(),
+                    existing.totalSeatsToAllocate(),
+                    "Ticket already purchased"
+            ));
+        }
 
         var requests = toTicketTypeRequests(body);
         PurchaseSummary summary = ticketService.purchaseTickets(body.accountId(), requests);
@@ -42,7 +65,8 @@ public class PurchaseController {
                 summary.infants(),
                 summary.totalTickets(),
                 summary.totalAmountToPay(),
-                summary.totalSeatsToAllocate()
+                summary.totalSeatsToAllocate(),
+                "Purchase confirmed"
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

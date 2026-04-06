@@ -34,7 +34,30 @@ class PurchaseIntegrationTest {
                 .andExpect(jsonPath("$.infants").value(1))
                 .andExpect(jsonPath("$.totalTickets").value(4))
                 .andExpect(jsonPath("$.totalAmountToPay").value(50))
-                .andExpect(jsonPath("$.totalSeatsToAllocate").value(3));
+                .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
+                .andExpect(jsonPath("$.message").value("Purchase confirmed"));
+    }
+
+    @Test
+    void repeatPurchaseForSameAccountReturnsExistingPurchase() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":99,"adultCount":1,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.accountId").value(99))
+                .andExpect(jsonPath("$.totalAmountToPay").value(20));
+
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":99,"adultCount":1,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").value(99))
+                .andExpect(jsonPath("$.totalAmountToPay").value(20))
+                .andExpect(jsonPath("$.message").value("Ticket already purchased"));
     }
 
     @Test

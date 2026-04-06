@@ -7,7 +7,8 @@ public record PurchaseResponseDto(
         int infants,
         int totalTickets,
         int totalAmountToPay,
-        int totalSeatsToAllocate
+        int totalSeatsToAllocate,
+        String message
 ) {
 }
 

@@ -11,7 +11,11 @@ import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
 import uk.gov.dwp.uc.pairtest.exception.SeatReservationFailedException;
+import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
+
+import java.time.Instant;
+import java.util.List;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -33,8 +37,12 @@ class PurchaseControllerTest {
     @MockitoBean
     private TicketService ticketService;
 
+    @MockitoBean
+    private PurchaseRepository purchaseRepository;
+
     @Test
     void returns400ForBeanValidationFailures() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -50,6 +58,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400ForBusinessRuleViolations() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -63,6 +72,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenTicketServiceRejectsPurchase() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new InvalidPurchaseException())
                 .when(ticketService)
                 .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
@@ -78,6 +88,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns201AndCallsTicketService() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new PurchaseSummary(2, 1, 1, 4, 50, 3));
 
@@ -90,13 +101,38 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.accountId").value(123))
                 .andExpect(jsonPath("$.totalAmountToPay").value(50))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
-                .andExpect(jsonPath("$.totalTickets").value(4));
+                .andExpect(jsonPath("$.totalTickets").value(4))
+                .andExpect(jsonPath("$.message").value("Purchase confirmed"));
 
         verify(ticketService).purchaseTickets(anyLong(), any(TicketTypeRequest[].class));
     }
 
     @Test
+    void returns200AndExistingPurchaseWhenAccountAlreadyPurchased() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of(
+                new uk.gov.dwp.uc.pairtest.domain.Purchase(
+                        123L, 2, 1, 0, 3, 50, 3, Instant.parse("2026-04-06T12:00:00Z")
+                )
+        ));
+
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":2,"childCount":1,"infantCount":0}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").value(123))
+                .andExpect(jsonPath("$.totalTickets").value(3))
+                .andExpect(jsonPath("$.totalAmountToPay").value(50))
+                .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
+                .andExpect(jsonPath("$.message").value("Ticket already purchased"));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
     void returns400WhenBodyIsEmpty() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(""))
@@ -123,6 +159,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns500ForUnexpectedException() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new RuntimeException("boom"))
                 .when(ticketService)
                 .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
@@ -138,6 +175,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns500ForPaymentFailure() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new PaymentFailedException("Payment failed", new RuntimeException("boom")))
                 .when(ticketService)
                 .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
@@ -153,6 +191,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns500ForSeatReservationFailure() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         doThrow(new SeatReservationFailedException("Seat reservation failed", new RuntimeException("boom")))
                 .when(ticketService)
                 .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
@@ -168,6 +207,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenFieldsAreMissing() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -181,6 +221,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenNegativeCountsProvided() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -194,6 +235,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenCountExceedsMax() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -208,6 +250,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400ForHugeCountsThatCouldOverflowInt() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -222,6 +265,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenTotalTicketsExceed25() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -235,6 +279,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenAllCountsAreZero() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -248,6 +293,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns400WhenInfantsExceedAdults() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -261,6 +307,7 @@ class PurchaseControllerTest {
 
     @Test
     void returns201ForAdultsOnly() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new PurchaseSummary(3, 0, 0, 3, 60, 3));
 
@@ -273,11 +320,13 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.adults").value(3))
                 .andExpect(jsonPath("$.totalAmountToPay").value(60))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
-                .andExpect(jsonPath("$.totalTickets").value(3));
+                .andExpect(jsonPath("$.totalTickets").value(3))
+                .andExpect(jsonPath("$.message").value("Purchase confirmed"));
     }
 
     @Test
     void infantsDoNotContributeToPaymentOrSeats() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new PurchaseSummary(2, 0, 2, 4, 40, 2));
 
@@ -289,11 +338,13 @@ class PurchaseControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.totalAmountToPay").value(40))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(2))
-                .andExpect(jsonPath("$.totalTickets").value(4));
+                .andExpect(jsonPath("$.totalTickets").value(4))
+                .andExpect(jsonPath("$.message").value("Purchase confirmed"));
     }
 
     @Test
     void oneAdultOneInfantOnLap() throws Exception {
+        when(purchaseRepository.findAll()).thenReturn(List.of());
         when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
                 .thenReturn(new PurchaseSummary(1, 0, 1, 2, 20, 1));
 
@@ -307,7 +358,8 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.infants").value(1))
                 .andExpect(jsonPath("$.totalAmountToPay").value(20))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(1))
-                .andExpect(jsonPath("$.totalTickets").value(2));
+                .andExpect(jsonPath("$.totalTickets").value(2))
+                .andExpect(jsonPath("$.message").value("Purchase confirmed"));
     }
 
     @Test
