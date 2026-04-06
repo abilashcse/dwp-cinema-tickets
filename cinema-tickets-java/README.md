@@ -12,6 +12,32 @@ This module implements the cinema ticket purchase kata:
 - Java 21
 - Maven 3.x
 
+## Demo (deployed)
+
+To see the app in action, visit:
+
+- `https://dwp-cinema-tickets.onrender.com/`
+
+Note: this runs on a **free** hosting tier. If the service is sleeping, the first request can take a bit longer while it wakes up (cold start).
+
+## Run locally
+
+From `cinema-tickets-java/`:
+
+```bash
+# Run the full test suite
+mvn test
+
+# Start the app
+mvn spring-boot:run
+```
+
+Then open:
+
+- UI: `http://localhost:8080/`
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
 ## Run tests
 
 From `cinema-tickets-java/`:
