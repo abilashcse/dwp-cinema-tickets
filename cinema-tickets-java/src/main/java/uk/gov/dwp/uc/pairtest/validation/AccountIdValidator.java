@@ -8,8 +8,7 @@ public final class AccountIdValidator implements PurchaseValidator<PurchaseReque
     @Override
     public void validate(PurchaseRequest request) throws InvalidPurchaseException {
         if (request == null || request.accountId() == null || request.accountId() <= 0) {
-            throw new InvalidPurchaseException();
+            throw new InvalidPurchaseException("Account ID must be greater than 0");
         }
     }
 }
-

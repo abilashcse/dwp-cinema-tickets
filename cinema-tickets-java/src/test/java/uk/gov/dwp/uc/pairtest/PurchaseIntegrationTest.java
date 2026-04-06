@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,13 +21,13 @@ class PurchaseIntegrationTest {
     private MockMvc mvc;
 
     @Test
-    void fullPurchaseFlowReturns200WithCorrectTotals() throws Exception {
+    void fullPurchaseFlowReturns201WithCorrectTotals() throws Exception {
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"accountId":42,"adultCount":2,"childCount":1,"infantCount":1}
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accountId").value(42))
                 .andExpect(jsonPath("$.adults").value(2))
                 .andExpect(jsonPath("$.children").value(1))
@@ -66,6 +67,17 @@ class PurchaseIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.ruleViolations[0]").value("Child and/or infant tickets require at least 1 adult ticket"));
+    }
+
+    @Test
+    void purchaseWithMoreInfantsThanAdultsReturns400() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":1,"adultCount":1,"childCount":0,"infantCount":2}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.ruleViolations", hasItem("Number of infants cannot exceed number of adults")));
     }
 
     @Test

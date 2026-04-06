@@ -8,75 +8,72 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BusinessRulesValidatorTest {
 
-    private static final long VALID_ACCOUNT_ID = 123L;
-
     @Test
-    void rejectsWhenContextIsNull() {
+    void rejectsWhenSummaryIsNull() {
         var validator = new BusinessRulesValidator(25);
         assertThrows(InvalidPurchaseException.class, () -> validator.validate(null));
     }
 
     @Test
-    void rejectsWhenSummaryIsNull() {
+    void rejectsWhenTotalTicketsIsZero() {
         var validator = new BusinessRulesValidator(25);
-        var ctx = new PurchaseContext(VALID_ACCOUNT_ID, null, null);
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(ctx));
+        var summary = new PurchaseSummary(0, 0, 0, 0, 0, 0);
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
     }
 
     @Test
     void rejectsWhenTotalTicketsExceedsMax() {
         var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                26, 0, 0,
-                26,
-                0,
-                0
-        );
-        var ctx = new PurchaseContext(VALID_ACCOUNT_ID, null, summary);
+        var summary = new PurchaseSummary(26, 0, 0, 26, 520, 26);
 
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(ctx));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
+    }
+
+    @Test
+    void allowsExactlyMaxTickets() {
+        var validator = new BusinessRulesValidator(25);
+        var summary = new PurchaseSummary(25, 0, 0, 25, 500, 25);
+
+        assertDoesNotThrow(() -> validator.validate(summary));
     }
 
     @Test
     void rejectsChildWithoutAdult() {
         var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                0, 1, 0,
-                1,
-                0,
-                0
-        );
-        var ctx = new PurchaseContext(VALID_ACCOUNT_ID, null, summary);
+        var summary = new PurchaseSummary(0, 1, 0, 1, 10, 1);
 
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(ctx));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
     }
 
     @Test
     void rejectsInfantWithoutAdult() {
         var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                0, 0, 1,
-                1,
-                0,
-                0
-        );
-        var ctx = new PurchaseContext(VALID_ACCOUNT_ID, null, summary);
+        var summary = new PurchaseSummary(0, 0, 1, 1, 0, 0);
 
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(ctx));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
+    }
+
+    @Test
+    void rejectsMoreInfantsThanAdults() {
+        var validator = new BusinessRulesValidator(25);
+        var summary = new PurchaseSummary(1, 0, 2, 3, 20, 1);
+
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(summary));
+    }
+
+    @Test
+    void allowsEqualInfantsAndAdults() {
+        var validator = new BusinessRulesValidator(25);
+        var summary = new PurchaseSummary(2, 0, 2, 4, 40, 2);
+
+        assertDoesNotThrow(() -> validator.validate(summary));
     }
 
     @Test
     void allowsValidPurchase() {
         var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                1, 1, 1,
-                3,
-                0,
-                0
-        );
-        var ctx = new PurchaseContext(VALID_ACCOUNT_ID, null, summary);
+        var summary = new PurchaseSummary(1, 1, 1, 3, 30, 2);
 
-        assertDoesNotThrow(() -> validator.validate(ctx));
+        assertDoesNotThrow(() -> validator.validate(summary));
     }
 }
-

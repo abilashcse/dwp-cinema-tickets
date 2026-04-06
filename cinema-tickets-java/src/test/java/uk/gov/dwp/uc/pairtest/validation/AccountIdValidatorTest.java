@@ -12,7 +12,9 @@ class AccountIdValidatorTest {
     private final AccountIdValidator validator = new AccountIdValidator();
 
     private static PurchaseRequest requestWithAccountId(Long accountId) {
-        return new PurchaseRequest(accountId, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1));
+        return new PurchaseRequest(accountId, new TicketTypeRequest[]{
+                new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+        });
     }
 
     @Test

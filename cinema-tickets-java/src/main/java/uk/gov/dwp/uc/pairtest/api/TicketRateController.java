@@ -1,5 +1,6 @@
 package uk.gov.dwp.uc.pairtest.api;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +15,11 @@ import java.util.List;
 @RequestMapping("/api/ticket-rates")
 public class TicketRateController {
 
-    private static final int MAX_TICKETS_PER_PURCHASE = 25;
+    private final int maxTicketsPerPurchase;
+
+    public TicketRateController(@Value("${purchase.max-tickets:25}") int maxTicketsPerPurchase) {
+        this.maxTicketsPerPurchase = maxTicketsPerPurchase;
+    }
 
     @GetMapping
     public ResponseEntity<TicketRatesResponseDto> getRates() {
@@ -28,6 +33,6 @@ public class TicketRateController {
                 })
                 .toList();
 
-        return ResponseEntity.ok(new TicketRatesResponseDto(rates, MAX_TICKETS_PER_PURCHASE));
+        return ResponseEntity.ok(new TicketRatesResponseDto(rates, maxTicketsPerPurchase));
     }
 }

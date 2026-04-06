@@ -37,9 +37,8 @@ public class LoggingAspect {
             return result;
         } catch (Throwable t) {
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
-            log.warn("{}.{} failed in {}ms: {}", declaringType, method, elapsedMs, t.toString());
+            log.warn("{}.{} failed in {}ms: {}", declaringType, method, elapsedMs, t.getMessage(), t);
             throw t;
         }
     }
 }
-

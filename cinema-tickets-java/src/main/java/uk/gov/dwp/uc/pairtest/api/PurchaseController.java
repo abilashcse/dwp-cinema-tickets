@@ -1,6 +1,7 @@
 package uk.gov.dwp.uc.pairtest.api;
 
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -8,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.dwp.uc.pairtest.TicketService;
-import uk.gov.dwp.uc.pairtest.domain.TicketPrice;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
+import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +19,13 @@ import java.util.List;
 @RequestMapping("/api/purchases")
 public class PurchaseController {
 
-    private static final int MAX_TICKETS_PER_PURCHASE = 25;
-
     private final TicketService ticketService;
+    private final int maxTicketsPerPurchase;
 
-    public PurchaseController(TicketService ticketService) {
+    public PurchaseController(TicketService ticketService,
+                              @Value("${purchase.max-tickets:25}") int maxTicketsPerPurchase) {
         this.ticketService = ticketService;
+        this.maxTicketsPerPurchase = maxTicketsPerPurchase;
     }
 
     @PostMapping
@@ -31,44 +33,40 @@ public class PurchaseController {
         validateBusinessRules(body);
 
         var requests = toTicketTypeRequests(body);
-        ticketService.purchaseTickets(body.accountId(), requests);
-
-        int adults = body.adultCount();
-        int children = body.childCount();
-        int infants = body.infantCount();
-        int totalTickets = adults + children + infants;
-        int totalAmountToPay = (adults * TicketPrice.ADULT.price()) + (children * TicketPrice.CHILD.price());
-        int totalSeatsToAllocate = adults + children;
+        PurchaseSummary summary = ticketService.purchaseTickets(body.accountId(), requests);
 
         var response = new PurchaseResponseDto(
                 body.accountId(),
-                adults,
-                children,
-                infants,
-                totalTickets,
-                totalAmountToPay,
-                totalSeatsToAllocate
+                summary.adults(),
+                summary.children(),
+                summary.infants(),
+                summary.totalTickets(),
+                summary.totalAmountToPay(),
+                summary.totalSeatsToAllocate()
         );
 
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    private static void validateBusinessRules(PurchaseRequestDto body) {
+    private void validateBusinessRules(PurchaseRequestDto body) {
         List<String> violations = new ArrayList<>();
 
-        int adults = body.adultCount();
-        int children = body.childCount();
-        int infants = body.infantCount();
+        long adults = body.adultCount();
+        long children = body.childCount();
+        long infants = body.infantCount();
 
-        int totalTickets = adults + children + infants;
+        long totalTickets = adults + children + infants;
         if (totalTickets == 0) {
             violations.add("At least one ticket must be purchased");
         }
-        if (totalTickets > MAX_TICKETS_PER_PURCHASE) {
-            violations.add("Total tickets must be <= " + MAX_TICKETS_PER_PURCHASE);
+        if (totalTickets > maxTicketsPerPurchase) {
+            violations.add("Total tickets must be <= " + maxTicketsPerPurchase);
         }
         if ((children > 0 || infants > 0) && adults == 0) {
             violations.add("Child and/or infant tickets require at least 1 adult ticket");
+        }
+        if (infants > adults) {
+            violations.add("Number of infants cannot exceed number of adults");
         }
 
         if (!violations.isEmpty()) {
@@ -92,4 +90,3 @@ public class PurchaseController {
         return requests.toArray(TicketTypeRequest[]::new);
     }
 }
-

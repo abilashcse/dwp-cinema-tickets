@@ -5,22 +5,21 @@ import org.springframework.stereotype.Repository;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Repository
 @Primary
 public class InMemoryPurchaseRepository implements PurchaseRepository {
-    private final List<Purchase> purchases = new ArrayList<>();
+    private final List<Purchase> purchases = new CopyOnWriteArrayList<>();
 
     @Override
     public void save(Purchase purchase) {
         purchases.add(purchase);
     }
 
+    @Override
     public List<Purchase> findAll() {
-        return Collections.unmodifiableList(purchases);
+        return List.copyOf(purchases);
     }
 }
-

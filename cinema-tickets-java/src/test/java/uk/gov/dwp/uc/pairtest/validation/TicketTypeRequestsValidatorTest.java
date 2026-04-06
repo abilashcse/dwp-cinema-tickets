@@ -20,7 +20,7 @@ class TicketTypeRequestsValidatorTest {
     @Test
     void rejectsNullTicketTypeRequestsArray() {
         assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseRequest(VALID_ACCOUNT_ID, (TicketTypeRequest[]) null)));
+                validator.validate(new PurchaseRequest(VALID_ACCOUNT_ID, null)));
     }
 
     @Test
@@ -37,17 +37,19 @@ class TicketTypeRequestsValidatorTest {
 
     @Test
     void acceptsValidSingleRequest() {
-        var request = new PurchaseRequest(VALID_ACCOUNT_ID,
-                new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1));
+        var request = new PurchaseRequest(VALID_ACCOUNT_ID, new TicketTypeRequest[]{
+                new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+        });
         assertDoesNotThrow(() -> validator.validate(request));
     }
 
     @Test
     void acceptsValidMultipleRequests() {
-        var request = new PurchaseRequest(VALID_ACCOUNT_ID,
+        var request = new PurchaseRequest(VALID_ACCOUNT_ID, new TicketTypeRequest[]{
                 new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2),
                 new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1),
-                new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1));
+                new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)
+        });
         assertDoesNotThrow(() -> validator.validate(request));
     }
 }

@@ -1,107 +1,24 @@
 package uk.gov.dwp.uc.pairtest;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
+import uk.gov.dwp.uc.pairtest.domain.Purchase;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
-import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
+import uk.gov.dwp.uc.pairtest.exception.SeatReservationFailedException;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 import uk.gov.dwp.uc.pairtest.validation.AccountIdValidator;
 import uk.gov.dwp.uc.pairtest.validation.BusinessRulesValidator;
-import uk.gov.dwp.uc.pairtest.validation.PurchaseContext;
-import uk.gov.dwp.uc.pairtest.validation.PurchaseRequest;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 import uk.gov.dwp.uc.pairtest.validation.TicketTypeRequestsValidator;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TicketServiceImplTest {
 
     private static final long VALID_ACCOUNT_ID = 123L;
-
-    @Test
-    void rejectsNullAccountId() {
-        var validator = new AccountIdValidator();
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseRequest(null, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1))));
-    }
-
-    @Test
-    void rejectsNonPositiveAccountId() {
-        var validator = new AccountIdValidator();
-
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseRequest(0L, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1))));
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseRequest(-1L, new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1))));
-    }
-
-    @Test
-    void rejectsNullRequestsArray() {
-        var validator = new TicketTypeRequestsValidator();
-
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseRequest(VALID_ACCOUNT_ID, (TicketTypeRequest[]) null)));
-    }
-
-    @Test
-    void rejectsEmptyRequestsArray() {
-        var validator = new TicketTypeRequestsValidator();
-
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseRequest(VALID_ACCOUNT_ID, new TicketTypeRequest[]{})));
-    }
-
-    @Test
-    void rejectsRequestWithNullType() {
-        assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(null, 1));
-    }
-
-    @Test
-    void rejectsRequestWithNonPositiveTicketCount() {
-        assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 0));
-        assertThrows(IllegalArgumentException.class, () -> new TicketTypeRequest(TicketTypeRequest.Type.ADULT, -1));
-    }
-
-    @Test
-    void rejectsMoreThan25TicketsInTotal() {
-        var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                26, 0, 0,
-                26,
-                0,
-                0
-        );
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseContext(VALID_ACCOUNT_ID, null, summary)));
-    }
-
-    @Test
-    void rejectsChildPurchaseWithoutAdult() {
-        var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                0, 1, 0,
-                1,
-                0,
-                0
-        );
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseContext(VALID_ACCOUNT_ID, null, summary)));
-    }
-
-    @Test
-    void rejectsInfantPurchaseWithoutAdult() {
-        var validator = new BusinessRulesValidator(25);
-        var summary = new PurchaseSummary(
-                0, 0, 1,
-                1,
-                0,
-                0
-        );
-        assertThrows(InvalidPurchaseException.class, () ->
-                validator.validate(new PurchaseContext(VALID_ACCOUNT_ID, null, summary)));
-    }
 
     @Test
     void adultsOnlyChargesAndReservesSeats() {
@@ -114,8 +31,8 @@ class TicketServiceImplTest {
                 new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2)
         );
 
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 2);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -131,8 +48,8 @@ class TicketServiceImplTest {
                 new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 3)
         );
 
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 70);
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 5);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 70);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -148,8 +65,8 @@ class TicketServiceImplTest {
                 new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)
         );
 
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 2);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 40);
         verifyNoMoreInteractions(payment, seats);
     }
 
@@ -166,13 +83,13 @@ class TicketServiceImplTest {
                 new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)
         );
 
-        verify(payment).makePayment(VALID_ACCOUNT_ID, 30);
         verify(seats).reserveSeat(VALID_ACCOUNT_ID, 2);
+        verify(payment).makePayment(VALID_ACCOUNT_ID, 30);
         verifyNoMoreInteractions(payment, seats);
     }
 
     @Test
-    void successfulPurchaseIsSavedToRepository() {
+    void successfulPurchaseIsSavedWithCorrectValues() {
         var payment = mock(TicketPaymentService.class);
         var seats = mock(SeatReservationService.class);
         var repo = mock(PurchaseRepository.class);
@@ -185,7 +102,65 @@ class TicketServiceImplTest {
                 new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)
         );
 
-        verify(repo).save(any());
+        var captor = ArgumentCaptor.forClass(Purchase.class);
+        verify(repo).save(captor.capture());
+
+        Purchase saved = captor.getValue();
+        assertEquals(VALID_ACCOUNT_ID, saved.accountId());
+        assertEquals(1, saved.adults());
+        assertEquals(1, saved.children());
+        assertEquals(1, saved.infants());
+        assertEquals(3, saved.totalTickets());
+        assertEquals(30, saved.totalAmountToPay());
+        assertEquals(2, saved.totalSeatsToAllocate());
+    }
+
+    @Test
+    void returnedSummaryContainsCorrectValues() {
+        var service = serviceWithMocks(mock(TicketPaymentService.class), mock(SeatReservationService.class));
+
+        PurchaseSummary summary = service.purchaseTickets(
+                VALID_ACCOUNT_ID,
+                new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2),
+                new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1),
+                new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1)
+        );
+
+        assertEquals(2, summary.adults());
+        assertEquals(1, summary.children());
+        assertEquals(1, summary.infants());
+        assertEquals(4, summary.totalTickets());
+        assertEquals(50, summary.totalAmountToPay());
+        assertEquals(3, summary.totalSeatsToAllocate());
+    }
+
+    @Test
+    void exactly25TicketsIsAllowed() {
+        var service = serviceWithMocks(mock(TicketPaymentService.class), mock(SeatReservationService.class));
+
+        assertDoesNotThrow(() -> service.purchaseTickets(
+                VALID_ACCOUNT_ID,
+                new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 25)
+        ));
+    }
+
+    @Test
+    void seatReservationFailureDoesNotChargePayment() {
+        var payment = mock(TicketPaymentService.class);
+        var seats = mock(SeatReservationService.class);
+        doThrow(new SeatReservationFailedException("fail", new RuntimeException()))
+                .when(seats).reserveSeat(anyLong(), anyInt());
+
+        var service = serviceWithMocks(payment, seats);
+
+        assertThrows(SeatReservationFailedException.class, () ->
+                service.purchaseTickets(
+                        VALID_ACCOUNT_ID,
+                        new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+                )
+        );
+
+        verify(payment, never()).makePayment(anyLong(), anyInt());
     }
 
     private static TicketServiceImpl serviceWithMocks(TicketPaymentService paymentService,

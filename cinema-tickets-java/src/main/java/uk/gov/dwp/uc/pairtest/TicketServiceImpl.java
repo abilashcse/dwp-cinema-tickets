@@ -10,7 +10,6 @@ import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.repository.PurchaseRepository;
 import uk.gov.dwp.uc.pairtest.validation.AccountIdValidator;
 import uk.gov.dwp.uc.pairtest.validation.BusinessRulesValidator;
-import uk.gov.dwp.uc.pairtest.validation.PurchaseContext;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseRequest;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 import uk.gov.dwp.uc.pairtest.validation.TicketTypeRequestsValidator;
@@ -40,16 +39,16 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
+    public PurchaseSummary purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
         PurchaseRequest request = new PurchaseRequest(accountId, ticketTypeRequests);
         accountIdValidator.validate(request);
         ticketTypeRequestsValidator.validate(request);
 
         PurchaseSummary summary = summarize(ticketTypeRequests);
-        businessRulesValidator.validate(new PurchaseContext(accountId, ticketTypeRequests, summary));
+        businessRulesValidator.validate(summary);
 
-        ticketPaymentService.makePayment(accountId, summary.totalAmountToPay());
         seatReservationService.reserveSeat(accountId, summary.totalSeatsToAllocate());
+        ticketPaymentService.makePayment(accountId, summary.totalAmountToPay());
 
         purchaseRepository.save(Purchase.of(
                 accountId,
@@ -60,6 +59,8 @@ public class TicketServiceImpl implements TicketService {
                 summary.totalAmountToPay(),
                 summary.totalSeatsToAllocate()
         ));
+
+        return summary;
     }
 
     private static PurchaseSummary summarize(TicketTypeRequest... ticketTypeRequests) {

@@ -3,22 +3,21 @@ package uk.gov.dwp.uc.pairtest.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.dwp.uc.pairtest.TicketService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
+import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,7 +29,7 @@ class PurchaseControllerTest {
     @Autowired
     private MockMvc mvc;
 
-    @MockBean
+    @MockitoBean
     private TicketService ticketService;
 
     @Test
@@ -77,13 +76,16 @@ class PurchaseControllerTest {
     }
 
     @Test
-    void returns200AndCallsTicketService() throws Exception {
+    void returns201AndCallsTicketService() throws Exception {
+        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+                .thenReturn(new PurchaseSummary(2, 1, 1, 4, 50, 3));
+
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"accountId":123,"adultCount":2,"childCount":1,"infantCount":1}
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accountId").value(123))
                 .andExpect(jsonPath("$.totalAmountToPay").value(50))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
@@ -201,13 +203,29 @@ class PurchaseControllerTest {
     }
 
     @Test
-    void returns200ForAdultsOnly() throws Exception {
+    void returns400WhenInfantsExceedAdults() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":1,"childCount":0,"infantCount":2}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.ruleViolations", hasItem("Number of infants cannot exceed number of adults")));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns201ForAdultsOnly() throws Exception {
+        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+                .thenReturn(new PurchaseSummary(3, 0, 0, 3, 60, 3));
+
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"accountId":1,"adultCount":3,"childCount":0,"infantCount":0}
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.adults").value(3))
                 .andExpect(jsonPath("$.totalAmountToPay").value(60))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(3))
@@ -216,15 +234,17 @@ class PurchaseControllerTest {
 
     @Test
     void infantsDoNotContributeToPaymentOrSeats() throws Exception {
+        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+                .thenReturn(new PurchaseSummary(2, 0, 2, 4, 40, 2));
+
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"accountId":1,"adultCount":1,"childCount":0,"infantCount":2}
+                                {"accountId":1,"adultCount":2,"childCount":0,"infantCount":2}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalAmountToPay").value(20))
-                .andExpect(jsonPath("$.totalSeatsToAllocate").value(1))
-                .andExpect(jsonPath("$.totalTickets").value(3));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.totalAmountToPay").value(40))
+                .andExpect(jsonPath("$.totalSeatsToAllocate").value(2))
+                .andExpect(jsonPath("$.totalTickets").value(4));
     }
 }
-

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.dwp.uc.pairtest.domain.Purchase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InMemoryPurchaseRepositoryTest {
@@ -39,9 +38,13 @@ class InMemoryPurchaseRepositoryTest {
     }
 
     @Test
-    void findAllReturnsUnmodifiableList() {
+    void findAllReturnsImmutableSnapshot() {
         repo.save(Purchase.of(1L, 1, 0, 0, 1, 20, 1));
-        assertThrows(UnsupportedOperationException.class, () ->
-                repo.findAll().add(Purchase.of(2L, 1, 0, 0, 1, 20, 1)));
+
+        var snapshot = repo.findAll();
+        repo.save(Purchase.of(2L, 1, 0, 0, 1, 20, 1));
+
+        assertEquals(1, snapshot.size(), "Snapshot should not reflect later additions");
+        assertEquals(2, repo.findAll().size());
     }
 }

@@ -7,11 +7,10 @@ public class ApiValidationException extends RuntimeException {
 
     public ApiValidationException(List<String> ruleViolations) {
         super("Validation failed");
-        this.ruleViolations = ruleViolations;
+        this.ruleViolations = List.copyOf(ruleViolations);
     }
 
     public List<String> ruleViolations() {
         return ruleViolations;
     }
 }
-

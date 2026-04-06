@@ -416,6 +416,9 @@
       if ((body.childCount > 0 || body.infantCount > 0) && body.adultCount === 0) {
         violations.push('Child and/or infant tickets require at least 1 adult ticket');
       }
+      if (body.infantCount > body.adultCount) {
+        violations.push('Number of infants cannot exceed number of adults');
+      }
 
       return { violations, fieldErrors };
     }
