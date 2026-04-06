@@ -20,6 +20,18 @@ From `cinema-tickets-java/`:
 mvn test
 ```
 
+## Test coverage report (JaCoCo)
+
+From `cinema-tickets-java/`:
+
+```bash
+mvn test
+```
+
+This generates an HTML coverage report at:
+
+- `target/site/jacoco/index.html`
+
 ## Business rules enforced
 
 - `accountId` must be non-null and `> 0`
@@ -29,6 +41,7 @@ mvn test
   - ticket count `> 0`
 - Total tickets (adult + child + infant) must be `<= 25`
 - Child and/or infant tickets require at least 1 adult ticket
+- Infants must not exceed adults (each infant sits on an adult’s lap)
 
 ## Pricing & seats
 

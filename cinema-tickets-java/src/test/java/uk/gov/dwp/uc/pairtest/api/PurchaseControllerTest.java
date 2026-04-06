@@ -10,6 +10,7 @@ import uk.gov.dwp.uc.pairtest.TicketService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.exception.PaymentFailedException;
+import uk.gov.dwp.uc.pairtest.exception.SeatReservationFailedException;
 import uk.gov.dwp.uc.pairtest.validation.PurchaseSummary;
 
 import static org.hamcrest.Matchers.hasItem;
@@ -151,6 +152,21 @@ class PurchaseControllerTest {
     }
 
     @Test
+    void returns500ForSeatReservationFailure() throws Exception {
+        doThrow(new SeatReservationFailedException("Seat reservation failed", new RuntimeException("boom")))
+                .when(ticketService)
+                .purchaseTickets(eq(123L), any(TicketTypeRequest[].class));
+
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":1,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Seat reservation failed"));
+    }
+
+    @Test
     void returns400WhenFieldsAreMissing() throws Exception {
         mvc.perform(post("/api/purchases")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -171,6 +187,34 @@ class PurchaseControllerTest {
                                 {"accountId":123,"adultCount":-1,"childCount":0,"infantCount":0}
                                 """))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns400WhenCountExceedsMax() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":26,"childCount":0,"infantCount":0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
+    }
+
+    @Test
+    void returns400ForHugeCountsThatCouldOverflowInt() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":123,"adultCount":2147483647,"childCount":1,"infantCount":0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
                 .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("adultCount")));
 
         verify(ticketService, never()).purchaseTickets(anyLong(), any());
@@ -246,5 +290,36 @@ class PurchaseControllerTest {
                 .andExpect(jsonPath("$.totalAmountToPay").value(40))
                 .andExpect(jsonPath("$.totalSeatsToAllocate").value(2))
                 .andExpect(jsonPath("$.totalTickets").value(4));
+    }
+
+    @Test
+    void oneAdultOneInfantOnLap() throws Exception {
+        when(ticketService.purchaseTickets(anyLong(), any(TicketTypeRequest[].class)))
+                .thenReturn(new PurchaseSummary(1, 0, 1, 2, 20, 1));
+
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":1,"adultCount":1,"childCount":0,"infantCount":1}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.adults").value(1))
+                .andExpect(jsonPath("$.infants").value(1))
+                .andExpect(jsonPath("$.totalAmountToPay").value(20))
+                .andExpect(jsonPath("$.totalSeatsToAllocate").value(1))
+                .andExpect(jsonPath("$.totalTickets").value(2));
+    }
+
+    @Test
+    void rejectsOneAdultWithTwoInfants() throws Exception {
+        mvc.perform(post("/api/purchases")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"accountId":1,"adultCount":1,"childCount":0,"infantCount":2}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.ruleViolations", hasItem("Number of infants cannot exceed number of adults")));
+
+        verify(ticketService, never()).purchaseTickets(anyLong(), any());
     }
 }
