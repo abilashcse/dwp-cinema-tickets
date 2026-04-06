@@ -46,6 +46,18 @@ From `cinema-tickets-java/`:
 mvn test
 ```
 
+## Unit test report (Surefire)
+
+From `cinema-tickets-java/`:
+
+```bash
+mvn verify
+```
+
+This generates an HTML unit test report at:
+
+- `target/site/surefire-report.html`
+
 ## Test coverage report (JaCoCo)
 
 From `cinema-tickets-java/`:
