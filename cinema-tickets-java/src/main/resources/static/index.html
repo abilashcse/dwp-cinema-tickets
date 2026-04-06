@@ -4,75 +4,487 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cinema Tickets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    :root { color-scheme: light; }
-    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 2rem; max-width: 720px; }
-    h1 { margin: 0 0 0.5rem; }
-    .muted { color: #555; }
-    form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; margin-top: 1.25rem; }
-    label { display: grid; gap: 0.25rem; font-weight: 600; }
-    input { padding: 0.5rem; font-size: 1rem; }
-    .row { grid-column: 1 / -1; display: flex; gap: 0.75rem; align-items: center; }
-    button { padding: 0.6rem 0.9rem; font-size: 1rem; cursor: pointer; }
-    pre { background: #f6f8fa; padding: 0.75rem; overflow: auto; border-radius: 6px; }
-    .links a { margin-right: 1rem; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --border: #e0e3e8;
+      --text: #1a1d23;
+      --text-muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success-bg: #ecfdf5;
+      --success-border: #6ee7b7;
+      --success-text: #065f46;
+      --error-bg: #fef2f2;
+      --error-border: #fca5a5;
+      --error-text: #991b1b;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .topbar h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+    .topbar nav { display: flex; gap: 0.5rem; }
+    .topbar nav a {
+      font-size: 0.8rem;
+      color: var(--primary);
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .topbar nav a:hover { background: rgba(79,70,229,.08); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      max-width: 1100px;
+      margin: 1.5rem auto;
+      padding: 0 1.25rem;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.01em;
+    }
+
+    .pricing {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .price-chip {
+      text-align: center;
+      padding: 0.65rem 0.5rem;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .price-chip .type { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+    .price-chip .amount { font-size: 1.15rem; font-weight: 700; margin-top: 0.15rem; }
+    .price-chip .note { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+    .field { margin-bottom: 0.85rem; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); }
+    .field input {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+    .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+
+    .ticket-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+
+    .estimate {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+      margin-top: 1rem;
+      padding: 0.65rem 0.85rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .estimate .total-amount { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+
+    .actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      font-family: inherit;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+    .status-text { font-size: 0.8rem; color: var(--text-muted); }
+
+    .terms {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .terms strong { font-weight: 600; color: var(--text); }
+
+    .right-pane { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .result-panel { padding: 1.25rem; }
+    .result-panel.ok  { border-color: var(--success-border); background: var(--success-bg); }
+    .result-panel.err { border-color: var(--error-border); background: var(--error-bg); }
+
+    .result-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+    .result-panel.ok .result-title { color: var(--success-text); }
+    .result-panel.err .result-title { color: var(--error-text); }
+
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1rem; }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      border-bottom: 1px dashed rgba(0,0,0,.08);
+      font-size: 0.88rem;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row b { font-weight: 700; }
+    .result-row.highlight { grid-column: 1 / -1; background: rgba(0,0,0,.03); padding: 0.45rem 0.5rem; border-radius: 6px; border-bottom: none; margin-top: 0.25rem; font-weight: 600; }
+
+    .error-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+    .error-list li {
+      font-size: 0.85rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 6px;
+      background: rgba(153,27,27,.06);
+      margin-bottom: 0.3rem;
+      color: var(--error-text);
+    }
+    .error-list li b { font-weight: 600; }
+
+    .placeholder {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+    .placeholder .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+    .raw-toggle {
+      font-size: 0.78rem;
+      color: var(--primary);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+      margin-top: 0.75rem;
+    }
+    .raw-toggle:hover { text-decoration: underline; }
+
+    pre.raw-json {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      overflow: auto;
+      max-height: 260px;
+      margin-top: 0.5rem;
+    }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+    @media (max-width: 740px) {
+      .layout { grid-template-columns: 1fr; }
+      .ticket-fields { grid-template-columns: 1fr; }
+      .pricing { grid-template-columns: 1fr; }
+      .result-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <h1>Cinema Tickets</h1>
-  <div class="muted">Purchase tickets via the API.</div>
 
-  <div class="links" style="margin-top: 0.75rem;">
-    <a href="/swagger-ui/index.html">Swagger UI</a>
-    <a href="/v3/api-docs">OpenAPI JSON</a>
-    <a href="/actuator/health">Health</a>
-  </div>
+  <header class="topbar">
+    <h1>Cinema Tickets</h1>
+    <nav>
+      <a href="/swagger-ui/index.html">Swagger UI</a>
+      <a href="/v3/api-docs">OpenAPI</a>
+      <a href="/actuator/health">Health</a>
+    </nav>
+  </header>
 
-  <form id="purchaseForm">
-    <label>
-      Account ID
-      <input name="accountId" type="number" min="1" required value="123" />
-    </label>
-    <div></div>
-    <label>
-      Adults
-      <input name="adultCount" type="number" min="0" required value="1" />
-    </label>
-    <label>
-      Children
-      <input name="childCount" type="number" min="0" required value="0" />
-    </label>
-    <label>
-      Infants
-      <input name="infantCount" type="number" min="0" required value="0" />
-    </label>
-    <div></div>
-    <div class="row">
-      <button type="submit">Purchase</button>
-      <span class="muted" id="status"></span>
-    </div>
-  </form>
+  <main class="layout">
 
-  <h2 style="margin-top: 1.25rem;">Response</h2>
-  <pre id="out">{}</pre>
+    <section class="card">
+      <div class="card-title">Book Tickets</div>
+
+      <div class="pricing" id="pricingChips">
+        <div class="price-chip"><div class="type">Loading&hellip;</div></div>
+      </div>
+
+      <form id="purchaseForm" novalidate>
+        <div class="field">
+          <label for="accountId">Account ID</label>
+          <input id="accountId" name="accountId" type="number" min="1" required value="123" inputmode="numeric" />
+        </div>
+
+        <div class="ticket-fields">
+          <div class="field">
+            <label for="adultCount">Adults</label>
+            <input id="adultCount" name="adultCount" type="number" min="0" required value="1" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label for="childCount">Children</label>
+            <input id="childCount" name="childCount" type="number" min="0" required value="0" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label for="infantCount">Infants</label>
+            <input id="infantCount" name="infantCount" type="number" min="0" required value="0" inputmode="numeric" />
+          </div>
+        </div>
+
+        <div class="estimate" id="estimate" aria-live="polite">
+          <span id="estimateBreakdown"></span>
+          <span class="total-amount" id="estimateTotal">&pound;0</span>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn-primary" id="submitBtn">Purchase Tickets</button>
+          <span class="status-text" id="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <div class="terms" id="termsSection">
+        <strong>Terms</strong>
+        <ul style="margin:0.35rem 0 0 1.1rem;">
+          <li>Maximum <strong id="termsMaxTickets">25 tickets</strong> per purchase.</li>
+          <li>Child and infant tickets require at least <strong>1 adult</strong>.</li>
+          <li>Infants do not require a seat &mdash; they sit on an adult&rsquo;s lap.</li>
+          <li>All prices include VAT.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="right-pane">
+      <div class="card" id="resultCard">
+        <div class="card-title">Purchase Summary</div>
+        <div id="result">
+          <div class="placeholder">
+            <div class="icon" aria-hidden="true">&#127902;</div>
+            <div>Fill in the form and hit <strong>Purchase Tickets</strong><br/>to see your booking summary here.</div>
+          </div>
+        </div>
+        <button type="button" class="raw-toggle" id="rawToggle" hidden>Show raw JSON</button>
+        <pre class="raw-json" id="out" hidden>{}</pre>
+      </div>
+    </section>
+
+  </main>
 
   <script>
     const form = document.getElementById('purchaseForm');
     const out = document.getElementById('out');
     const statusEl = document.getElementById('status');
+    const resultEl = document.getElementById('result');
+    const resultCard = document.getElementById('resultCard');
+    const rawToggle = document.getElementById('rawToggle');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let MAX_TICKETS = 25;
+    const PRICES = {};
+
+    const adultInput = document.getElementById('adultCount');
+    const childInput = document.getElementById('childCount');
+    const infantInput = document.getElementById('infantCount');
+    const estimateBreakdown = document.getElementById('estimateBreakdown');
+    const estimateTotal = document.getElementById('estimateTotal');
+    const pricingChips = document.getElementById('pricingChips');
+    const termsMaxTickets = document.getElementById('termsMaxTickets');
+
+    function renderPricingChips(rates) {
+      pricingChips.innerHTML = rates.map(r => {
+        const display = r.price === 0 ? 'Free' : `\u00a3${r.price}`;
+        const note = r.requiresSeat ? '' : '<div class="note">sits on lap</div>';
+        const label = r.type.charAt(0) + r.type.slice(1).toLowerCase();
+        return `<div class="price-chip"><div class="type">${esc(label)}</div><div class="amount">${esc(display)}</div>${note}</div>`;
+      }).join('');
+    }
+
+    async function loadRates() {
+      try {
+        const res = await fetch('/api/ticket-rates');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        MAX_TICKETS = data.maxTicketsPerPurchase;
+        termsMaxTickets.textContent = `${MAX_TICKETS} tickets`;
+
+        for (const r of data.rates) {
+          PRICES[r.type.toLowerCase()] = r.price;
+        }
+        renderPricingChips(data.rates);
+      } catch {
+        pricingChips.innerHTML = '<div class="price-chip"><div class="type">Unavailable</div></div>';
+      }
+      updateEstimate();
+    }
+
+    function updateEstimate() {
+      const adults = Math.max(0, asInt(adultInput.value) || 0);
+      const children = Math.max(0, asInt(childInput.value) || 0);
+      const infants = Math.max(0, asInt(infantInput.value) || 0);
+
+      const adultPrice = PRICES.adult ?? 0;
+      const childPrice = PRICES.child ?? 0;
+      const total = (adults * adultPrice) + (children * childPrice);
+
+      const parts = [];
+      if (adults)  parts.push(`${adults} adult \u00d7 \u00a3${adultPrice}`);
+      if (children) parts.push(`${children} child \u00d7 \u00a3${childPrice}`);
+      if (infants) parts.push(`${infants} infant (free)`);
+
+      estimateBreakdown.textContent = parts.length ? parts.join(' + ') : 'No tickets selected';
+      estimateTotal.textContent = `\u00a3${total}`;
+    }
+
+    for (const el of [adultInput, childInput, infantInput]) {
+      el.addEventListener('input', updateEstimate);
+    }
+    loadRates();
+
+    rawToggle.addEventListener('click', () => {
+      const showing = out.hidden;
+      out.hidden = !showing;
+      rawToggle.textContent = showing ? 'Hide raw JSON' : 'Show raw JSON';
+    });
+
+    function asInt(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.trunc(n) : NaN;
+    }
+
+    function validateClientSide(body) {
+      const violations = [];
+      const fieldErrors = [];
+
+      if (!Number.isFinite(body.accountId) || body.accountId < 1) {
+        fieldErrors.push({ field: 'accountId', message: 'must be greater than or equal to 1' });
+      }
+      for (const f of ['adultCount', 'childCount', 'infantCount']) {
+        if (!Number.isFinite(body[f]) || body[f] < 0) {
+          fieldErrors.push({ field: f, message: 'must be greater than or equal to 0' });
+        }
+      }
+
+      const totalTickets = body.adultCount + body.childCount + body.infantCount;
+      if (Number.isFinite(totalTickets)) {
+        if (totalTickets === 0) violations.push('At least one ticket must be purchased');
+        if (totalTickets > MAX_TICKETS) violations.push(`Total tickets must be \u2264 ${MAX_TICKETS}`);
+      }
+      if ((body.childCount > 0 || body.infantCount > 0) && body.adultCount === 0) {
+        violations.push('Child and/or infant tickets require at least 1 adult ticket');
+      }
+
+      return { violations, fieldErrors };
+    }
+
+    function esc(s) {
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+    }
+
+    function renderErrors({ message, fieldErrors = [], ruleViolations = [] }) {
+      const items = [];
+      for (const err of fieldErrors) items.push(`<li><b>${esc(err.field)}</b>: ${esc(err.message)}</li>`);
+      for (const v of ruleViolations) items.push(`<li>${esc(v)}</li>`);
+
+      resultEl.innerHTML = `
+        <div class="result-panel card err" role="alert">
+          <div class="result-title">&#10060; Purchase failed</div>
+          <div style="font-size:0.85rem;color:var(--error-text)">${esc(message || 'Request failed')}</div>
+          ${items.length ? `<ul class="error-list">${items.join('')}</ul>` : ''}
+        </div>`;
+      rawToggle.hidden = false;
+    }
+
+    function renderSuccess(dto) {
+      resultEl.innerHTML = `
+        <div class="result-panel card ok">
+          <div class="result-title">&#9989; Purchase confirmed</div>
+          <div class="result-grid">
+            <div class="result-row"><span>Account</span><b>${esc(dto.accountId)}</b></div>
+            <div class="result-row"><span>Total tickets</span><b>${esc(dto.totalTickets)}</b></div>
+            <div class="result-row"><span>Adults</span><b>${esc(dto.adults)}</b></div>
+            <div class="result-row"><span>Children</span><b>${esc(dto.children)}</b></div>
+            <div class="result-row"><span>Infants</span><b>${esc(dto.infants)}</b></div>
+            <div class="result-row highlight"><span>Seats allocated</span><b>${esc(dto.totalSeatsToAllocate)}</b></div>
+            <div class="result-row highlight"><span>Amount paid</span><b>&pound;${esc(dto.totalAmountToPay)}</b></div>
+          </div>
+        </div>`;
+      rawToggle.hidden = false;
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      statusEl.textContent = 'Submitting...';
+      const totalPrice = estimateTotal.textContent;
+      statusEl.textContent = 'Submitting\u2026';
+      submitBtn.textContent = `Purchasing ${totalPrice}\u2026`;
+      submitBtn.disabled = true;
       out.textContent = '{}';
+      out.hidden = true;
+      rawToggle.hidden = true;
+      rawToggle.textContent = 'Show raw JSON';
 
       const data = Object.fromEntries(new FormData(form).entries());
       const body = {
-        accountId: Number(data.accountId),
-        adultCount: Number(data.adultCount),
-        childCount: Number(data.childCount),
-        infantCount: Number(data.infantCount),
+        accountId: asInt(data.accountId),
+        adultCount: asInt(data.adultCount),
+        childCount: asInt(data.childCount),
+        infantCount: asInt(data.infantCount),
       };
+
+      const clientCheck = validateClientSide(body);
+      if (clientCheck.fieldErrors.length || clientCheck.violations.length) {
+        statusEl.textContent = 'Please fix the errors below';
+        renderErrors({
+          message: 'Validation failed',
+          fieldErrors: clientCheck.fieldErrors,
+          ruleViolations: clientCheck.violations,
+        });
+        submitBtn.disabled = false;
+        return;
+      }
 
       try {
         const res = await fetch('/api/purchases', {
@@ -82,13 +494,23 @@
         });
         const json = await res.json().catch(() => ({}));
         out.textContent = JSON.stringify(json, null, 2);
-        statusEl.textContent = res.ok ? 'OK' : ('Error ' + res.status);
+
+        if (res.ok) {
+          statusEl.textContent = '';
+          renderSuccess(json);
+        } else {
+          statusEl.textContent = 'Error ' + res.status;
+          renderErrors(json || { message: 'Request failed' });
+        }
       } catch (err) {
         statusEl.textContent = 'Network error';
         out.textContent = String(err);
+        renderErrors({ message: 'A network error occurred. Please try again.' });
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Purchase Tickets';
       }
     });
   </script>
 </body>
 </html>
-
