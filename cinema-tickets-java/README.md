@@ -192,7 +192,7 @@ flowchart LR
   %% ================
   %% Purchase flow
   %% ================
-  PurchaseController -->|purchaseTicketsWithReceipt(...)| TicketService
+  PurchaseController -->|purchaseTicketsWithReceipt| TicketService
   TicketService --> AccountIdValidator
   TicketService --> TicketTypeRequestsValidator
   TicketService -->|creates PurchaseSummary| BusinessRulesValidator
