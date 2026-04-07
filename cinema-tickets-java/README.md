@@ -114,3 +114,107 @@ Configuration in `application.properties`:
   - `uk.gov.dwp.uc.pairtest.data.InMemoryPurchaseRepository`
 - **Third-party services (do not edit)**: `thirdparty.*`
 
+## Architecture diagram
+
+```mermaid
+flowchart LR
+  %% ================
+  %% Clients
+  %% ================
+  subgraph Clients
+    UI["Browser UI\n`src/main/resources/static/index.html`"]
+    APIClient["API client\n(curl/Postman/etc.)"]
+  end
+
+  %% ================
+  %% Spring Boot app
+  %% ================
+  subgraph App["Spring Boot app\n`CinemaTicketsApplication`"]
+    direction LR
+
+    subgraph Web["Web layer (`uk.gov.dwp.uc.pairtest.api`)"]
+      PurchaseController["`PurchaseController`\nGET /api/purchases\nPOST /api/purchases"]
+      TicketRateController["`TicketRateController`\nGET /api/ticket-rates"]
+      ApiExceptionHandler["`ApiExceptionHandler`\nJSON error responses"]
+    end
+
+    subgraph CrossCutting["Cross-cutting"]
+      RateLimit["`ApiRateLimitFilter`\n(rate limit `/api/*`)"]
+      Logging["`LoggingAspect`\n(controller/service/repo timing)"]
+    end
+
+    subgraph UseCase["Use case / orchestration"]
+      TicketService["`TicketServiceImpl`\n`CinemaTicketService`"]
+    end
+
+    subgraph Validation["Validation"]
+      AccountIdValidator["`AccountIdValidator`"]
+      TicketTypeRequestsValidator["`TicketTypeRequestsValidator`"]
+      BusinessRulesValidator["`BusinessRulesValidator`"]
+    end
+
+    subgraph Config["Config / props"]
+      TicketPricing["`TicketPricingProperties`\n(ticket-pricing.*)"]
+      RateLimitProps["`RateLimitProperties`\n(rate-limit.*)"]
+    end
+
+    subgraph Integrations["Third-party adapters (`uk.gov.dwp.uc.pairtest.integration`)"]
+      SeatAdapter["`ThirdPartySeatReservationService`\nwraps `thirdparty.seatbooking.*`"]
+      PaymentAdapter["`ThirdPartyTicketPaymentService`\nwraps `thirdparty.paymentgateway.*`"]
+    end
+
+    subgraph Data["Data / persistence"]
+      RepoPort["`PurchaseRepository` (port)"]
+      RepoImpl["`InMemoryPurchaseRepository` (default @Primary)\n(or `NoOpPurchaseRepository`)"]
+    end
+  end
+
+  %% ================
+  %% Request paths
+  %% ================
+  UI -->|GET rates| TicketRateController
+  UI -->|POST purchase| PurchaseController
+  UI -->|GET history| PurchaseController
+  APIClient --> PurchaseController
+  APIClient --> TicketRateController
+
+  %% ================
+  %% Cross-cutting + handlers
+  %% ================
+  RateLimit --> PurchaseController
+  RateLimit --> TicketRateController
+  Logging -.-> PurchaseController
+  Logging -.-> TicketService
+  Logging -.-> RepoImpl
+  PurchaseController -.-> ApiExceptionHandler
+  TicketRateController -.-> ApiExceptionHandler
+
+  %% ================
+  %% Purchase flow
+  %% ================
+  PurchaseController -->|`purchaseTicketsWithReceipt(...)`| TicketService
+  TicketService --> AccountIdValidator
+  TicketService --> TicketTypeRequestsValidator
+  TicketService -->|creates `PurchaseSummary`| BusinessRulesValidator
+  TicketService --> TicketPricing
+  TicketService --> SeatAdapter
+  TicketService --> PaymentAdapter
+  TicketService --> RepoPort
+  RepoPort --> RepoImpl
+
+  RateLimit --> RateLimitProps
+```
+
+### End-to-end request flow (purchase)
+
+- **Client**: browser UI (or any HTTP client) calls `POST /api/purchases`
+- **Web layer**: `PurchaseController` validates API-level business rules + maps input to domain `TicketTypeRequest[]`
+- **Use case**: `TicketServiceImpl` performs input validation, computes totals, checks business rules, then:
+  - reserves seats via `ThirdPartySeatReservationService`
+  - makes payment via `ThirdPartyTicketPaymentService`
+  - persists the successful `Purchase` via the `PurchaseRepository` port (default: `InMemoryPurchaseRepository`)
+- **Cross-cutting**:
+  - `/api/*` is rate-limited by `ApiRateLimitFilter` (HTTP 429 on exceed)
+  - controllers/services/repos are timed by `LoggingAspect`
+  - errors are normalized to JSON by `ApiExceptionHandler`
+
