@@ -122,50 +122,50 @@ flowchart LR
   %% Clients
   %% ================
   subgraph Clients
-    UI["Browser UI\n`src/main/resources/static/index.html`"]
+    UI["Browser UI\nsrc/main/resources/static/index.html"]
     APIClient["API client\n(curl/Postman/etc.)"]
   end
 
   %% ================
   %% Spring Boot app
   %% ================
-  subgraph App["Spring Boot app\n`CinemaTicketsApplication`"]
+  subgraph App["Spring Boot app\nCinemaTicketsApplication"]
     direction LR
 
     subgraph Web["Web layer (`uk.gov.dwp.uc.pairtest.api`)"]
-      PurchaseController["`PurchaseController`\nGET /api/purchases\nPOST /api/purchases"]
-      TicketRateController["`TicketRateController`\nGET /api/ticket-rates"]
-      ApiExceptionHandler["`ApiExceptionHandler`\nJSON error responses"]
+      PurchaseController["PurchaseController\nGET /api/purchases\nPOST /api/purchases"]
+      TicketRateController["TicketRateController\nGET /api/ticket-rates"]
+      ApiExceptionHandler["ApiExceptionHandler\nJSON error responses"]
     end
 
     subgraph CrossCutting["Cross-cutting"]
-      RateLimit["`ApiRateLimitFilter`\n(rate limit `/api/*`)"]
-      Logging["`LoggingAspect`\n(controller/service/repo timing)"]
+      RateLimit["ApiRateLimitFilter\n(rate limit /api/*)"]
+      Logging["LoggingAspect\n(controller/service/repo timing)"]
     end
 
     subgraph UseCase["Use case / orchestration"]
-      TicketService["`TicketServiceImpl`\n`CinemaTicketService`"]
+      TicketService["TicketServiceImpl\n(CinemaTicketService)"]
     end
 
     subgraph Validation["Validation"]
-      AccountIdValidator["`AccountIdValidator`"]
-      TicketTypeRequestsValidator["`TicketTypeRequestsValidator`"]
-      BusinessRulesValidator["`BusinessRulesValidator`"]
+      AccountIdValidator["AccountIdValidator"]
+      TicketTypeRequestsValidator["TicketTypeRequestsValidator"]
+      BusinessRulesValidator["BusinessRulesValidator"]
     end
 
     subgraph Config["Config / props"]
-      TicketPricing["`TicketPricingProperties`\n(ticket-pricing.*)"]
-      RateLimitProps["`RateLimitProperties`\n(rate-limit.*)"]
+      TicketPricing["TicketPricingProperties\n(ticket-pricing.*)"]
+      RateLimitProps["RateLimitProperties\n(rate-limit.*)"]
     end
 
     subgraph Integrations["Third-party adapters (`uk.gov.dwp.uc.pairtest.integration`)"]
-      SeatAdapter["`ThirdPartySeatReservationService`\nwraps `thirdparty.seatbooking.*`"]
-      PaymentAdapter["`ThirdPartyTicketPaymentService`\nwraps `thirdparty.paymentgateway.*`"]
+      SeatAdapter["ThirdPartySeatReservationService\nwraps thirdparty.seatbooking.*"]
+      PaymentAdapter["ThirdPartyTicketPaymentService\nwraps thirdparty.paymentgateway.*"]
     end
 
     subgraph Data["Data / persistence"]
-      RepoPort["`PurchaseRepository` (port)"]
-      RepoImpl["`InMemoryPurchaseRepository` (default @Primary)\n(or `NoOpPurchaseRepository`)"]
+      RepoPort["PurchaseRepository (port)"]
+      RepoImpl["InMemoryPurchaseRepository (default @Primary)\n(or NoOpPurchaseRepository)"]
     end
   end
 
@@ -192,10 +192,10 @@ flowchart LR
   %% ================
   %% Purchase flow
   %% ================
-  PurchaseController -->|`purchaseTicketsWithReceipt(...)`| TicketService
+  PurchaseController -->|purchaseTicketsWithReceipt(...)| TicketService
   TicketService --> AccountIdValidator
   TicketService --> TicketTypeRequestsValidator
-  TicketService -->|creates `PurchaseSummary`| BusinessRulesValidator
+  TicketService -->|creates PurchaseSummary| BusinessRulesValidator
   TicketService --> TicketPricing
   TicketService --> SeatAdapter
   TicketService --> PaymentAdapter
